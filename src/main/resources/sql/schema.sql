@@ -4,7 +4,7 @@ create table dish (
     id serial primary key,
     name varchar not null,
     dish_type varchar not null check
-        (dish_type in ('START', 'MAIN', 'DESSERT')) default 'START'
+        (dish_type in ('STARTER', 'MAIN', 'DESSERT')) default 'STARTER'
 );
 
 create table ingredient (
