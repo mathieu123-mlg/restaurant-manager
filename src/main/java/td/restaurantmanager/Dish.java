@@ -17,13 +17,6 @@ public class Dish {
         this.ingredients = ingredients;
     }
 
-    public Dish(int id, String name, DishTypeEnum dishType) {
-        this.id = id;
-        this.name = name;
-        this.dishType = dishType;
-        this.ingredients = new ArrayList<>();
-    }
-
     public int getId() {
         return id;
     }
@@ -41,7 +34,7 @@ public class Dish {
     }
 
     public Double getDishCost() {
-        return ingredients.isEmpty() ? 0 : ingredients.stream().mapToDouble(Ingredient::getPrice).sum();
+        return ingredients.stream().mapToDouble(Ingredient::getPrice).sum();
     }
 
     @Override
