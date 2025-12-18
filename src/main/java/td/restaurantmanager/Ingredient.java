@@ -3,7 +3,7 @@ package td.restaurantmanager;
 import java.util.Objects;
 
 public class Ingredient {
-    private final int id;
+    private final Integer id;
     private final String name;
     private final Double price;
     private final CategoryEnum category;
@@ -43,6 +43,8 @@ public class Ingredient {
     public Dish getDish() {
         return dish;
     }
+
+    public void setDish(Dish dish) { this.dish = dish; }
 
     public String getDishName() {
         return this.dish == null ? null : this.dish.getName();

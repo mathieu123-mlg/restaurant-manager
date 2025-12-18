@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class Dish {
-    private final int id;
+    private final Integer id;
     private final String name;
     private final DishTypeEnum dishType;
     private final List<Ingredient> ingredients;
@@ -30,6 +30,14 @@ public class Dish {
 
     public List<Ingredient> getIngredients() {
         return ingredients;
+    }
+
+    public void setIngredients(List<Ingredient> ingredients) {
+        if (this.ingredients != null) {
+            for (Ingredient ingredient : ingredients) {
+                ingredient.setDish(this);
+            }
+        }
     }
 
     public Double getDishCost() {
