@@ -6,11 +6,13 @@ import java.sql.DriverManager;
 public class DBConnection {
     public Connection getDBConnection() {
         try {
-            AppConfig config = new AppConfig();
+            String jdbc_url = System.getenv("JDBC_URL");
+            String username = System.getenv("USERNAME");
+            String password = System.getenv("PASSWORD");
 
-            String jdbc_url = config.getJDBC_URL();
-            String username = config.getUSERNAME();
-            String password = config.getPASSWORD();
+            if (jdbc_url == null || username == null || password == null) {
+                throw new RuntimeException("JDBC_URL, USERNAME or PASSWORD NULL");
+            }
 
             return DriverManager.getConnection(jdbc_url, username, password);
         } catch (Exception e) {
