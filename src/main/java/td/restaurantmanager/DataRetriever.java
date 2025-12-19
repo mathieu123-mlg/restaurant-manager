@@ -1,31 +1,34 @@
 package td.restaurantmanager;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DataRetriever {
-    private final DBConnection connection = new DBConnection();
+    private final DBConnection dbConnection = new DBConnection();
 
-    public List<Ingredient> findIngredientsById(Integer id) {
-        String query =
+    public List<Ingredient> findIngredientsOfDishById(Integer id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Id is required");
+        } else if (id <= 0) {
+            throw new IllegalArgumentException("Id must be greater than 0");
+        }
+
+        String sql =
                 """
                         select i.id as ingredient_id, i.name as ingredient_name, i.price, i.category
                         from dish
                                  left join ingredient i on i.id_dish = dish.id
-                        where id_dish = ?;""";
-        try (
-                PreparedStatement preparedStatement = connection.getDBConnection().prepareStatement(query);
-        ) {
+                        where id_dish = ? ;""";
+        Connection databaseConnection = dbConnection.getDBConnection();
+        try {
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
             preparedStatement.setInt(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
 
-            if (resultSet == null) {
-                throw new IllegalArgumentException("Ingredient not found");
-            }
-
-            List<Ingredient> ingredient = new ArrayList<>();
+            List<Ingredient> ingredientFromDB = new ArrayList<>();
 
             while (resultSet.next()) {
                 Integer ingredient_id = (Integer) resultSet.getInt("ingredient_id");
@@ -33,67 +36,66 @@ public class DataRetriever {
                 Double price = resultSet.getDouble("price");
                 CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
 
-                ingredient.add(new Ingredient(
-                        ingredient_id,
-                        name,
-                        price,
-                        category
-                ));
+                ingredientFromDB.add(
+                        new Ingredient(
+                                ingredient_id,
+                                name,
+                                price,
+                                category
+                        )
+                );
             }
 
-            if (ingredient.isEmpty()) {
-                throw new IllegalArgumentException("Ingredient not found");
+            if (ingredientFromDB.isEmpty()) {
+                throw new RuntimeException("Ingredient not found on dish");
             } else {
-                return ingredient;
+                return ingredientFromDB;
             }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
-            connection.closeDBConnection();
+            dbConnection.closeDBConnection();
         }
     }
 
     public Dish findDishById(Integer id) {
-        String query = "SELECT id, name, dish_type from dish where id = ?;";
-        try (
-                PreparedStatement preparedStatement = connection.getDBConnection().prepareStatement(query);
-        ) {
+        if (id == null) {
+            throw new IllegalArgumentException("Id is required");
+        } else if (id <= 0) {
+            throw new IllegalArgumentException("Id must be greater than 0");
+        }
+
+        String sql = "SELECT id, name, dish_type from dish where id = ?;";
+        Connection databaseConnection = dbConnection.getDBConnection();
+        try {
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
             preparedStatement.setInt(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
 
-            if (resultSet == null) {
-                throw new IllegalArgumentException("Dish not found");
+            if (!resultSet.next()) {
+                throw new RuntimeException("Dish with id " + id + " not found");
             }
 
-            Dish dish = null;
+            Integer id_dish = (Integer) resultSet.getInt("id");
+            String name = resultSet.getString("name");
+            DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
+            List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
 
-            while (resultSet.next()) {
-                Integer dish_id = (Integer) resultSet.getInt("id");
-                String name = resultSet.getString("name");
-                DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
-                List<Ingredient> ingredients_list = findIngredientsById(id);
+            Dish dishFromDatabase = new Dish(
+                    id_dish,
+                    name,
+                    dish_type,
+                    ingredients_list
+            );
 
-                dish = new Dish(
-                        dish_id,
-                        name,
-                        dish_type,
-                        ingredients_list
-                );
-
-                dish.setIngredients(ingredients_list);
-            }
-
-            if (dish == null) {
-                throw new IllegalArgumentException("Dish not found");
-            } else {
-                return dish;
-            }
+            dishFromDatabase.setIngredients(ingredients_list);
+            return dishFromDatabase;
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
-            connection.closeDBConnection();
+            dbConnection.closeDBConnection();
         }
     }
 
