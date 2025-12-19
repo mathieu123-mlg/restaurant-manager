@@ -47,7 +47,7 @@ public class DataRetriever {
             }
 
             if (ingredientFromDB.isEmpty()) {
-                throw new RuntimeException("Ingredient not found on dish");
+                throw new RuntimeException("Ingredient is empty on this dish");
             } else {
                 return ingredientFromDB;
             }
@@ -100,7 +100,48 @@ public class DataRetriever {
     }
 
     public List<Ingredient> findIngredients(int page, int size) {
-        return null;
+        if (page <= 0 || size <= 0) {
+            throw new IllegalArgumentException("Page and size must be greater than 0");
+        }
+
+        String sql =
+                """
+                        SELECT 
+                            i.id, i.name, i.price, i.category, i.id_dish
+                        FROM ingredient i
+                        LIMIT ? OFFSET ? ;""";
+        Connection databaseConnection = dbConnection.getDBConnection();
+        List<Ingredient> ingredientsFromDB = new ArrayList<>();
+        try {
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
+            preparedStatement.setInt(1, size);
+            preparedStatement.setInt(2, (page - 1) * size);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            while (resultSet.next()) {
+                Integer id = (Integer) resultSet.getInt("id");
+                String name = resultSet.getString("name");
+                Double price = resultSet.getDouble("price");
+                CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
+                Integer id_dish = (Integer) resultSet.getInt("id_dish");
+
+                Dish dishFromDB = findDishById(id_dish);
+
+                ingredientsFromDB.add(new Ingredient(
+                        id,
+                        name,
+                        price,
+                        category,
+                        dishFromDB
+                ));
+            }
+
+            return ingredientsFromDB;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection();
+        }
     }
 
     public List<Ingredient> createIncgredients(List<Ingredient> newIngredients) {
