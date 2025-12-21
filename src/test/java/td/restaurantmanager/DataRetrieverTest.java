@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DataRetrieverTest {
@@ -17,7 +18,7 @@ public class DataRetrieverTest {
     }
 
     @Test
-    @DisplayName("Find dish by id=1")
+    @DisplayName("a. Find dish by id=1")
     void findDishById_1() {
         //When
         Dish find_dish_1 = dataRetriever.findDishById(1);
@@ -55,20 +56,19 @@ public class DataRetrieverTest {
     }
 
     @Test
-    @DisplayName("Find dish by id=999")
+    @DisplayName("b. Find dish by id=999")
     void findDishById_999() {
         //Then
         Assertions.assertThrows(
-                RuntimeException.class,
-                () -> {
+                RuntimeException.class, () -> {
                     Dish find_dish_999 = dataRetriever.findDishById(999);
                 },
-                "Should have thrown an exception"
+                "Should throw an exception"
         );
     }
 
     @Test
-    @DisplayName("Find ingredients page=2, size=2")
+    @DisplayName("c. Find ingredients page=2, size=2")
     void findIngredientsPage_2Size_2() {
         //when
         List<Ingredient> ingredients_p2_s2 = dataRetriever.findIngredients(2, 2);
@@ -83,12 +83,75 @@ public class DataRetrieverTest {
     }
 
     @Test
-    @DisplayName("Find ingredients page=3, size=5")
+    @DisplayName("d. Find ingredients page=3, size=5")
     void findIngredientsPage_3Size_5() {
         //when
         List<Ingredient> ingredients_p3_s5 = dataRetriever.findIngredients(3, 5);
 
         //then
         Assertions.assertEquals(0, ingredients_p3_s5.size(), "Should return empty list");
+        Assertions.assertEquals(new ArrayList<>(), ingredients_p3_s5, "Should return empty list");
+    }
+
+    @Test
+    @DisplayName("i. Create ingredients fromage and oignon")
+    void createIngredientsFromageAndOignon() {
+        //when
+        List<Ingredient> fromage_and_oignon = List.of(
+                new Ingredient(
+                        6,
+                        "Fromage",
+                        1200.0,
+                        CategoryEnum.DAIRY
+                ),
+                new Ingredient(
+                        7,
+                        "Oignon",
+                        500.0,
+                        CategoryEnum.VEGETABLE
+                )
+        );
+        Ingredient fromage = fromage_and_oignon.get(0);
+        Ingredient oignon = fromage_and_oignon.get(1);
+
+        var ingredient_cree = dataRetriever.createIngredients(fromage_and_oignon);
+
+        //then
+        Assertions.assertEquals(fromage_and_oignon, ingredient_cree, "Sould be have same value and return Fromage and Oignon");
+
+        Assertions.assertEquals(2, ingredient_cree.size(), "Sould be 2");
+        Assertions.assertNull(fromage.getDish(), "Dish of Fromage is null");
+        Assertions.assertNull(oignon.getDish(), "Dish of Oignon is null");
+        Assertions.assertEquals(fromage.getDishName(), oignon.getDishName());
+        Assertions.assertEquals(fromage.getDishName(), ingredient_cree.get(0).getDishName());
+        Assertions.assertEquals(oignon.getDishName(), ingredient_cree.get(1).getDishName());
+    }
+
+    @Test
+    @DisplayName("j. Create ingredients Carotte and laitue")
+    void createIngredientsCarotteAndLaitue() {
+        //when
+        List<Ingredient> carotte_and_laitue = List.of(
+                new Ingredient(
+                        8,
+                        "Carotte",
+                        2000.0,
+                        CategoryEnum.VEGETABLE
+                ),
+                new Ingredient(
+                        9,
+                        "Laitue",
+                        2000.0,
+                        CategoryEnum.VEGETABLE
+                )
+        );
+
+        //then
+        Assertions.assertThrows(
+                RuntimeException.class, () -> {
+                    dataRetriever.createIngredients(carotte_and_laitue);
+                },
+                "Should throw an exception"
+        );
     }
 }
