@@ -44,7 +44,9 @@ public class Ingredient {
         return dish;
     }
 
-    public void setDish(Dish dish) { this.dish = dish; }
+    public void setDish(Dish dish) {
+        this.dish = dish;
+    }
 
     public String getDishName() {
         return this.dish == null ? null : this.dish.getName();
@@ -54,22 +56,25 @@ public class Ingredient {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Ingredient that = (Ingredient) o;
-        return id == that.id && Objects.equals(name, that.name) && Objects.equals(price, that.price) && category == that.category;
+        return id.equals(that.id) || Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, price, category);
+        return Objects.hash(id, name);
     }
 
     @Override
     public String toString() {
         return "Ingredient{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", price=" + price +
-                ", category=" + category +
-                ", dishName='" + this.getDishName() + '\'' +
-                '}';
+               "id=" + id +
+               ", name='" + name + '\'' +
+               ", price=" + price +
+               ", category=" + category +
+               ", dishName=" + (
+                       this.getDishName() == null ?
+                               this.getDishName()
+                               : ('\'' + this.getDishName() + '\'')) +
+               '}';
     }
 }
