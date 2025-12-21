@@ -1,63 +1,11 @@
 package td.restaurantmanager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DataRetriever {
     private final DBConnection dbConnection = new DBConnection();
-
-    public List<Ingredient> findIngredientsOfDishById(Integer id) {
-        if (id == null) {
-            throw new IllegalArgumentException("Id is required");
-        } else if (id <= 0) {
-            throw new IllegalArgumentException("Id must be greater than 0");
-        }
-
-        String sql =
-                """
-                        select i.id as ingredient_id, i.name as ingredient_name, i.price, i.category
-                        from dish
-                                 left join ingredient i on i.id_dish = dish.id
-                        where id_dish = ? ;""";
-        Connection databaseConnection = dbConnection.getDBConnection();
-        try {
-            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
-            preparedStatement.setInt(1, id);
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            List<Ingredient> ingredientFromDB = new ArrayList<>();
-
-            while (resultSet.next()) {
-                Integer ingredient_id = (Integer) resultSet.getInt("ingredient_id");
-                String name = resultSet.getString("ingredient_name");
-                Double price = resultSet.getDouble("price");
-                CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
-
-                ingredientFromDB.add(
-                        new Ingredient(
-                                ingredient_id,
-                                name,
-                                price,
-                                category
-                        )
-                );
-            }
-
-            if (ingredientFromDB.isEmpty()) {
-                throw new RuntimeException("Ingredient is empty on this dish");
-            } else {
-                return ingredientFromDB;
-            }
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            dbConnection.closeDBConnection();
-        }
-    }
 
     public Dish findDishById(Integer id) {
         if (id == null) {
@@ -106,9 +54,8 @@ public class DataRetriever {
 
         String sql =
                 """
-                        SELECT 
-                            i.id, i.name, i.price, i.category, i.id_dish
-                        FROM ingredient i
+                        SELECT id, name, price, category, id_dish
+                        FROM ingredient
                         LIMIT ? OFFSET ? ;""";
         Connection databaseConnection = dbConnection.getDBConnection();
         List<Ingredient> ingredientsFromDB = new ArrayList<>();
@@ -144,8 +91,44 @@ public class DataRetriever {
         }
     }
 
-    public List<Ingredient> createIncgredients(List<Ingredient> newIngredients) {
-        return null;
+    public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
+        if (newIngredients == null || newIngredients.isEmpty()) {
+            throw new IllegalArgumentException("New ingredient is required");
+        }
+
+        String sql =
+                """
+                        INSERT INTO ingredient (id, name, price, category, id_dish) 
+                        VALUES (?, ?, ?, ?, ?);""";
+        Connection databaseConnection = dbConnection.getDBConnection();
+        try {
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
+            databaseConnection.setAutoCommit(false);
+            List<Ingredient> allIngredients = getListIngredients();
+
+            for (Ingredient newIngredient : newIngredients) {
+
+                if (allIngredients.contains(newIngredient)) {
+                    throw new RuntimeException("Ingredient named: '" + newIngredient.getName() + "' already exists with ID: " + newIngredient.getId());
+                }
+                SQLBuildParams(newIngredient, preparedStatement);
+                preparedStatement.executeUpdate();
+            }
+
+            databaseConnection.commit();
+            databaseConnection.setAutoCommit(true);
+            return newIngredients;
+
+        } catch (Exception e) {
+            try {
+                databaseConnection.rollback();
+                throw new RuntimeException(e);
+            } catch (SQLException sqlException) {
+                throw new RuntimeException(sqlException);
+            }
+        } finally {
+            dbConnection.closeDBConnection();
+        }
     }
 
     public Dish SaveDish(Dish dishToSave) {
@@ -158,5 +141,93 @@ public class DataRetriever {
 
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
         return null;
+    }
+
+    private List<Ingredient> findIngredientsOfDishById(Integer id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Id is required");
+        } else if (id <= 0) {
+            throw new IllegalArgumentException("Id must be greater than 0");
+        }
+
+        String sql =
+                """
+                        select i.id as ingredient_id, i.name as ingredient_name, i.price, i.category
+                        from dish
+                                 left join ingredient i on i.id_dish = dish.id
+                        where id_dish = ? ;""";
+        Connection databaseConnection = dbConnection.getDBConnection();
+        try {
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
+            preparedStatement.setInt(1, id);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            List<Ingredient> ingredientFromDB = new ArrayList<>();
+
+            while (resultSet.next()) {
+                Integer ingredient_id = (Integer) resultSet.getInt("ingredient_id");
+                String name = resultSet.getString("ingredient_name");
+                Double price = resultSet.getDouble("price");
+                CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
+
+                ingredientFromDB.add(
+                        new Ingredient(
+                                ingredient_id,
+                                name,
+                                price,
+                                category
+                        )
+                );
+            }
+
+            return ingredientFromDB;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection();
+        }
+    }
+
+    private void SQLBuildParams(Ingredient newIngredient, PreparedStatement preparedStatement) {
+        try {
+            preparedStatement.setInt(1, newIngredient.getId());
+            preparedStatement.setString(2, newIngredient.getName());
+            preparedStatement.setDouble(3, newIngredient.getPrice());
+            preparedStatement.setString(4, newIngredient.getCategory().toString());
+
+            if (newIngredient.getDishName() == null) {
+                preparedStatement.setNull(5, Types.INTEGER);
+            } else {
+                preparedStatement.setInt(5, newIngredient.getDish().getId());
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private List<Ingredient> getListIngredients() {
+        String sql = "SELECT id, name, price, category, id_dish FROM ingredient;";
+        Connection databaseConnection = dbConnection.getDBConnection();
+        try {
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            List<Ingredient> ingredientFromDB = new ArrayList<>();
+
+            while (resultSet.next()) {
+                Integer id = (Integer) resultSet.getInt("id");
+                String name = resultSet.getString("name");
+                Double price = resultSet.getDouble("price");
+                CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
+
+                Ingredient ingredient = new Ingredient(id, name, price, category);
+                ingredientFromDB.add(ingredient);
+            }
+
+            return ingredientFromDB;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
