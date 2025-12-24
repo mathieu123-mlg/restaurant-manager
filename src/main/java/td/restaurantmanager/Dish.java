@@ -16,7 +16,7 @@ public class Dish {
         this.ingredients = ingredients;
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
@@ -48,7 +48,7 @@ public class Dish {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Dish dish = (Dish) o;
-        return id == dish.id && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(ingredients, dish.ingredients);
+        return id.equals(dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(ingredients, dish.ingredients);
     }
 
     @Override
