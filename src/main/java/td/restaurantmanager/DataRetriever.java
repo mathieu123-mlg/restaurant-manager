@@ -205,14 +205,20 @@ public class DataRetriever {
     }
 
     public List<Dish> findDishByIngredientsName(String ingredientsName) {
-        if (!(ingredientsName == null || ingredientsName.trim().isEmpty())) {
+        if (ingredientsName == null || ingredientsName.trim().isEmpty()) {
             return new ArrayList<>();
         }
         Connection databaseConnection = dbConnection.getDBConnection();
-        String sql = "select id, name, dish_type from dish where name ilike ? order by id;";
+        String sql =
+                """
+                        select dish.id, dish.name, dish.dish_type 
+                        from dish 
+                        join ingredient on ingredient.id_dish = dish.id 
+                        where ingredient.name ilike ? 
+                        order by dish.id;""";
         try {
             PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
-            preparedStatement.setString(1, ("%" + ingredientsName + "%"));
+            preparedStatement.setString(1, "%" + ingredientsName + "%");
             ResultSet resultSet = preparedStatement.executeQuery();
 
             List<Dish> dishes = new ArrayList<>();
@@ -230,8 +236,10 @@ public class DataRetriever {
                 );
 
                 dish.setIngredients(dish.getIngredients());
+                System.out.println(dish);
                 dishes.add(dish);
             }
+            System.out.println(dishes);
             return dishes;
 
         } catch (Exception e) {
