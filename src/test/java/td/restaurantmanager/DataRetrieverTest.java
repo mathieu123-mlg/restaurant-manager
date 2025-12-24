@@ -94,7 +94,38 @@ public class DataRetrieverTest {
     }
 
     @Test
+    @DisplayName("e. 'eur' --> Gâteau aux chocolat')")
+    void findDishByIngredietsName_eur() {
+        //when
+        List<Dish> dish_list = dataRetriever.findDishByIngredientsName("eur");
+
+        //then
+        Assertions.assertEquals(1, dish_list.size(), "Should return 1");
+        Assertions.assertEquals("Gâteau aux chocolat", dish_list.get(0).getName());
+        Assertions.assertEquals("Gâteau aux chocolat", dish_list.get(0).getIngredients().getFirst().getDishName());
+    }
+
+    @Test
+    @DisplayName("f. ")
+    void findIngredientsByCriteria_a() {
+
+    }
+
+    @Test
+    @DisplayName("g. ")
+    void findIngredientsByCriteria_b() {
+
+    }
+
+    @Test
+    @DisplayName("h. ")
+    void findIngredientsByCriteria_c() {
+
+    }
+
+    @Test
     @DisplayName("i. Create ingredients fromage and oignon")
+
     void createIngredientsFromageAndOignon() {
         //when
         List<Ingredient> fromage_and_oignon = List.of(
@@ -208,9 +239,9 @@ public class DataRetrieverTest {
         Assertions.assertNotEquals(2, salade_fraiche.getIngredients().size(), "Throw error");
         Assertions.assertEquals(4, salade_fraiche.getIngredients().size(), "Return 4 ingredients");
         Assertions.assertEquals(
-                (   500
+                (500
                  + 2000
-                 +  200
+                 + 200
                  + 3000),
                 salade_fraiche.getDishCost(),
                 "Return 5700"
