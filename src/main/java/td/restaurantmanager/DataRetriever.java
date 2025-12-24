@@ -206,7 +206,7 @@ public class DataRetriever {
 
     public List<Dish> findDishByIngredientsName(String ingredientsName) {
         if (ingredientsName == null || ingredientsName.trim().isEmpty()) {
-            return new ArrayList<>();
+            throw new IllegalArgumentException("ingredientsName is null or empty");
         }
         Connection databaseConnection = dbConnection.getDBConnection();
         String sql =
