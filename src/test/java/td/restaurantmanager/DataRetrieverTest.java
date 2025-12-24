@@ -154,4 +154,94 @@ public class DataRetrieverTest {
                 "Should throw an exception"
         );
     }
+
+    @Test
+    @DisplayName("k. Soupe légume with ingredient oignon")
+    void soupeLegumeWithIngredientOignon() {
+        //when
+        Ingredient oignon = new Ingredient(
+                7, "Oignon",
+                500.00,
+                CategoryEnum.VEGETABLE
+        );
+        Dish soupe_legume = new Dish(
+                8,
+                "Soupe de légumes",
+                DishTypeEnum.STARTER,
+                List.of(oignon)
+        );
+
+        dataRetriever.saveDish(soupe_legume);
+
+        //then
+        Assertions.assertEquals(soupe_legume.getIngredients(), List.of(oignon), "Sould be true");
+        Assertions.assertEquals(soupe_legume.getName(), oignon.getDishName(), "Sould have same name");
+        Assertions.assertNotEquals(new ArrayList<>(), soupe_legume.getIngredients(), "Throw a erroer");
+    }
+
+    @Test
+    @DisplayName("l. Salade fraîche ingredient updated with oignon and fromage")
+    void saladeFraicheIngredientUpdatedWithOignonAndFromage() {
+        //when
+        Dish salade_fraiche = new Dish(
+                1,
+                "Salade fraiche",
+                DishTypeEnum.STARTER,
+                List.of(
+                        new Ingredient(7, "Oignon", 500.0, CategoryEnum.VEGETABLE),
+                        new Ingredient(1, "Laitue", 2000.0, CategoryEnum.VEGETABLE),
+                        new Ingredient(2, "Tomate", 200.00, CategoryEnum.VEGETABLE),
+                        new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
+                )
+        );
+        dataRetriever.saveDish(salade_fraiche);
+
+        //then
+        Assertions.assertEquals(
+                salade_fraiche.getIngredients(),
+                List.of(
+                        new Ingredient(7, "Oignon", 500.0, CategoryEnum.VEGETABLE),
+                        new Ingredient(1, "Laitue", 2000.0, CategoryEnum.VEGETABLE),
+                        new Ingredient(2, "Tomate", 200.00, CategoryEnum.VEGETABLE),
+                        new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
+                ));
+        Assertions.assertNotEquals(2, salade_fraiche.getIngredients().size(), "Throw error");
+        Assertions.assertEquals(4, salade_fraiche.getIngredients().size(), "Return 4 ingredients");
+        Assertions.assertEquals(
+                (   500
+                 + 2000
+                 +  200
+                 + 3000),
+                salade_fraiche.getDishCost(),
+                "Return 5700"
+        );
+    }
+
+    @Test
+    @DisplayName("m. Salade fraîche ingredient only fromage")
+    void saladeFraicheIngredientOnlyFromage() {
+        //when
+        Dish salade_fraiche = new Dish(
+                1,
+                "Salade fraiche",
+                DishTypeEnum.STARTER,
+                List.of(
+                        new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
+                )
+        );
+        dataRetriever.saveDish(salade_fraiche);
+
+        //then
+        Assertions.assertEquals(1, salade_fraiche.getIngredients().size(), "Return 1");
+        Assertions.assertEquals(
+                "Fromage",
+                salade_fraiche.getIngredients().get(0).getName(),
+                "Return Fromage"
+        );
+        Assertions.assertNotEquals(
+                5700,
+                salade_fraiche.getIngredients().get(0).getPrice(),
+                "Have different cost"
+        );
+    }
 }
