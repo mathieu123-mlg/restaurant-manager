@@ -1,10 +1,6 @@
 package td.restaurantmanager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -209,7 +205,40 @@ public class DataRetriever {
     }
 
     public List<Dish> findDishByIngredientsName(String ingredientsName) {
-        return null;
+        if (!(ingredientsName == null || ingredientsName.trim().isEmpty())) {
+            return new ArrayList<>();
+        }
+        Connection databaseConnection = dbConnection.getDBConnection();
+        String sql = "select id, name, dish_type from dish where name ilike ? order by id;";
+        try {
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
+            preparedStatement.setString(1, ("%" + ingredientsName + "%"));
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            List<Dish> dishes = new ArrayList<>();
+            while (resultSet.next()) {
+                Integer id = (Integer) resultSet.getInt("id");
+                String name = resultSet.getString("name");
+                DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
+                List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
+
+                Dish dish = new Dish(
+                        id,
+                        name,
+                        dish_type,
+                        ingredients_list
+                );
+
+                dish.setIngredients(dish.getIngredients());
+                dishes.add(dish);
+            }
+            return dishes;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection();
+        }
     }
 
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
