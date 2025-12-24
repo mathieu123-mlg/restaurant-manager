@@ -1,6 +1,10 @@
 package td.restaurantmanager;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -112,7 +116,7 @@ public class DataRetriever {
                 if (allIngredients.contains(newIngredient)) {
                     throw new RuntimeException("Ingredient named: '" + newIngredient.getName() + "' already exists with ID: " + newIngredient.getId());
                 }
-                SQLBuildParams(newIngredient, preparedStatement);
+                SQLBuildParams_createIngredients(newIngredient, preparedStatement);
                 preparedStatement.executeUpdate();
             }
 
@@ -221,7 +225,7 @@ public class DataRetriever {
             preparedStatement.setString(1, "%" + ingredientsName + "%");
             ResultSet resultSet = preparedStatement.executeQuery();
 
-            List<Dish> dishes = new ArrayList<>();
+            List<Dish> dishFromDatabase = new ArrayList<>();
             while (resultSet.next()) {
                 Integer id = (Integer) resultSet.getInt("id");
                 String name = resultSet.getString("name");
@@ -236,11 +240,10 @@ public class DataRetriever {
                 );
 
                 dish.setIngredients(dish.getIngredients());
-                System.out.println(dish);
-                dishes.add(dish);
+                dishFromDatabase.add(dish);
             }
-            System.out.println(dishes);
-            return dishes;
+
+            return dishFromDatabase;
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -250,7 +253,54 @@ public class DataRetriever {
     }
 
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
-        return null;
+        if (page <= 0 || size <= 0) {
+            throw new IllegalArgumentException("page or size null");
+        }
+        StringBuilder sql = new StringBuilder(
+                """
+                        select 
+                            ingredient.id, 
+                            ingredient.name,
+                            ingredient.price,
+                            ingredient.category,
+                            ingredient.id_dish
+                        from ingredient
+                        join dish on dish.id = ingredient.id_dish
+                        where 1 = 1"""
+        );
+        Connection databaseConnection = dbConnection.getDBConnection();
+        try {
+            PreparedStatement preparedStatement = SQLBuildParams_findIngredientsByCriteria(
+                    sql,
+                    ingredientName,
+                    category,
+                    dishName,
+                    databaseConnection,
+                    page,
+                    size
+            );
+
+            preparedStatement.executeQuery();
+            ResultSet resultSet = preparedStatement.getResultSet();
+            List<Ingredient> ingredientsFromDB = new ArrayList<>();
+            while (resultSet.next()) {
+                Integer id = (Integer) resultSet.getInt("id");
+                String name = resultSet.getString("name");
+                Double price = resultSet.getDouble("price");
+                CategoryEnum category_type = CategoryEnum.valueOf(resultSet.getString("category"));
+                Integer id_dish = resultSet.getInt("id_dish");
+
+                Ingredient ingredient = new Ingredient(id, name, price, category_type);
+                ingredient.setDish(findDishById(id_dish));
+                ingredientsFromDB.add(ingredient);
+            }
+            return ingredientsFromDB;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection();
+        }
     }
 
     private List<Ingredient> findIngredientsOfDishById(Integer id) {
@@ -299,7 +349,7 @@ public class DataRetriever {
         }
     }
 
-    private void SQLBuildParams(Ingredient newIngredient, PreparedStatement preparedStatement) {
+    private void SQLBuildParams_createIngredients(Ingredient newIngredient, PreparedStatement preparedStatement) {
         try {
             preparedStatement.setInt(1, newIngredient.getId());
             preparedStatement.setString(2, newIngredient.getName());
@@ -412,6 +462,44 @@ public class DataRetriever {
             throw new RuntimeException(e);
         } finally {
             dbConnection.closeDBConnection();
+        }
+    }
+
+    private PreparedStatement SQLBuildParams_findIngredientsByCriteria(StringBuilder sql, String ingredientName, CategoryEnum category, String dishName, Connection databaseConnection, int page, int size) {
+        try {
+            if (ingredientName != null) {
+                sql.append(" and ingredient.name ilike ? ");
+            }
+            if (category != null) {
+                sql.append(" and ingredient.category ilike ? ");
+            }
+            if (dishName != null) {
+                sql.append(" and dish.name ilike ? ");
+            }
+            sql.append(" order by ingredient.id");
+            sql.append(" limit ? offset ? ;");
+
+            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql.toString());
+            int i = 0;
+            if (ingredientName != null) {
+                preparedStatement.setString(i + 1, "%" + ingredientName + "%");
+                i += 1;
+            }
+            if (category != null) {
+                preparedStatement.setString(i + 1, "%" + category.toString() + "%");
+                i += 1;
+            }
+            if (dishName != null) {
+                preparedStatement.setString(i + 1, "%" + dishName + "%");
+                i += 1;
+            }
+            preparedStatement.setInt(i + 1, size);
+            i+=1;
+            preparedStatement.setInt(i + 1, (page - 1) * size);
+
+            return preparedStatement;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }
