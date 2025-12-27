@@ -108,19 +108,55 @@ public class DataRetrieverTest {
     @Test
     @DisplayName("f. ")
     void findIngredientsByCriteria_a() {
+        //when
+        List<Ingredient> ingredientList = dataRetriever.findIngredientsByCriteria(
+                null,
+                CategoryEnum.VEGETABLE,
+                null,
+                1,
+                10
+        );
 
+        List<String> result = ingredientList.stream()
+                .map(Ingredient::getName)
+                .toList();
+        //then
+        Assertions.assertEquals(List.of("Laitue", "Tomate") , result);
     }
 
     @Test
     @DisplayName("g. ")
     void findIngredientsByCriteria_b() {
+        //when
+        List<Ingredient> ingredientList = dataRetriever.findIngredientsByCriteria(
+                "cho",
+                null,
+                "Sal",
+                1,
+                10
+        );
 
+        //then
+        Assertions.assertEquals(new ArrayList<>(), ingredientList, "Should return empty list");
+        Assertions.assertEquals(0, ingredientList.size(), "Should return 0");
     }
 
     @Test
     @DisplayName("h. ")
     void findIngredientsByCriteria_c() {
+        //when
+        List<Ingredient> ingredientList = dataRetriever.findIngredientsByCriteria(
+                "cho",
+                null,
+                "gâteau",
+                1,
+                10
+        );
 
+        Ingredient chocolat = ingredientList.getFirst();
+        //then
+        Assertions.assertEquals("Chocolat", chocolat.getName());
+        Assertions.assertEquals(1, ingredientList.size());
     }
 
     @Test
