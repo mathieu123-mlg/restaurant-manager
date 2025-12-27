@@ -106,7 +106,7 @@ public class DataRetrieverTest {
     }
 
     @Test
-    @DisplayName("f. ")
+    @DisplayName("f. Find ingredient having category VEGETABLE at page 1 size 10 --> ['Laitue', 'Tomate'")
     void findIngredientsByCriteria_a() {
         //when
         List<Ingredient> ingredientList = dataRetriever.findIngredientsByCriteria(
@@ -125,7 +125,7 @@ public class DataRetrieverTest {
     }
 
     @Test
-    @DisplayName("g. ")
+    @DisplayName("g. Find ingredient having name = 'cho', dish_name = 'Sal' at page 1 size 10 --> []")
     void findIngredientsByCriteria_b() {
         //when
         List<Ingredient> ingredientList = dataRetriever.findIngredientsByCriteria(
@@ -142,7 +142,7 @@ public class DataRetrieverTest {
     }
 
     @Test
-    @DisplayName("h. ")
+    @DisplayName("h. Find ingredient having name = 'cho', dish_name = 'gâteau' at page 1 size 10 --> ['Chocolat']")
     void findIngredientsByCriteria_c() {
         //when
         List<Ingredient> ingredientList = dataRetriever.findIngredientsByCriteria(
