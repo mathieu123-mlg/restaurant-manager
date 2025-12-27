@@ -2,8 +2,11 @@ package td.restaurantmanager;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class DBConnection {
+    private Connection connection;
+
     public Connection getDBConnection() {
         try {
             String jdbc_url = System.getenv("JDBC_URL");
@@ -14,17 +17,21 @@ public class DBConnection {
                 throw new RuntimeException("JDBC_URL, USERNAME or PASSWORD NULL");
             }
 
-            return DriverManager.getConnection(jdbc_url, username, password);
+            connection = DriverManager.getConnection(jdbc_url, username, password);
+            return connection;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     public void closeDBConnection() {
-        if (this.getDBConnection() != null) {
+        if (connection != null) {
             try {
-                this.getDBConnection().close();
-            } catch (Exception e) {
+                if (!connection.isClosed()) {
+                    connection.close();
+                }
+                connection = null;
+            } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
         }

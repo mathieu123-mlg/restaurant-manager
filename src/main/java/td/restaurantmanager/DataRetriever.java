@@ -1,5 +1,6 @@
 package td.restaurantmanager;
 
+import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -494,12 +495,67 @@ public class DataRetriever {
                 i += 1;
             }
             preparedStatement.setInt(i + 1, size);
-            i+=1;
+            i += 1;
             preparedStatement.setInt(i + 1, (page - 1) * size);
 
             return preparedStatement;
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    protected void resetData() {
+        String deleteIngredient = "DELETE FROM ingredient;";
+        String deleteDish = "DELETE FROM dish;";
+
+        String resetSequenceDish = "ALTER SEQUENCE dish_id_seq RESTART WITH 1;";
+        String resetSequenceIngredient = "ALTER SEQUENCE ingredient_id_seq RESTART WITH 1;";
+
+        String initialDish = """
+                INSERT INTO dish (id, name, dish_type)
+                VALUES (1, 'Salade fraîche', 'STARTER'),
+                       (2, 'Poulet grillé', 'MAIN'),
+                       (3, 'Riz au légume', 'MAIN'),
+                       (4, 'Gâteau aux chocolat', 'DESSERT'),
+                       (5, 'Salade de fruits', 'DESSERT');
+                """;
+
+        String initialIngredient = """
+                INSERT INTO ingredient (id, name, price, category, id_dish)
+                VALUES (1, 'Laitue', 800.00, 'VEGETABLE', 1),
+                       (2, 'Tomate', 600.00, 'VEGETABLE', 1),
+                       (3, 'Poulet', 4500.00, 'ANIMAL', 2),
+                       (4, 'Chocolat', 3000.00, 'OTHER', 4),
+                       (5, 'Beurre', 2500.00, 'DAIRY', 4);
+                """;
+        Connection databaseConnection = dbConnection.getDBConnection();
+
+        try {
+            databaseConnection.setAutoCommit(false);
+            Statement stmt = databaseConnection.createStatement();
+            stmt.executeUpdate(deleteIngredient);
+            stmt.executeUpdate(deleteDish);
+
+            stmt.executeUpdate(resetSequenceDish);
+            stmt.executeUpdate(resetSequenceIngredient);
+
+            stmt.executeUpdate(initialDish);
+            stmt.executeUpdate(initialIngredient);
+
+            databaseConnection.commit();
+
+        } catch (SQLException e) {
+            try {
+                databaseConnection.rollback();
+                throw new RuntimeException("Erreur lors de la réinitialisation des données", e);
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+        } finally {
+            try {
+                databaseConnection.setAutoCommit(true);
+            } catch (SQLException _) {}
+            dbConnection.closeDBConnection();
         }
     }
 }

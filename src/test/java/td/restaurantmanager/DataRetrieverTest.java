@@ -1,9 +1,6 @@
 package td.restaurantmanager;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +11,14 @@ public class DataRetrieverTest {
     //given
     @BeforeEach
     public void setUp() {
-        dataRetriever = new DataRetriever();
+        this.dataRetriever = new DataRetriever();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (this.dataRetriever != null) {
+            this.dataRetriever.resetData();
+        }
     }
 
     @Test
@@ -121,7 +125,7 @@ public class DataRetrieverTest {
                 .map(Ingredient::getName)
                 .toList();
         //then
-        Assertions.assertEquals(List.of("Laitue", "Tomate") , result);
+        Assertions.assertEquals(List.of("Laitue", "Tomate"), result);
     }
 
     @Test
@@ -161,9 +165,8 @@ public class DataRetrieverTest {
 
     @Test
     @DisplayName("i. Create ingredients fromage and oignon")
-
     void createIngredientsFromageAndOignon() {
-        //when
+        //given
         List<Ingredient> fromage_and_oignon = List.of(
                 new Ingredient(
                         6,
@@ -181,6 +184,7 @@ public class DataRetrieverTest {
         Ingredient fromage = fromage_and_oignon.get(0);
         Ingredient oignon = fromage_and_oignon.get(1);
 
+        //when
         var ingredient_cree = dataRetriever.createIngredients(fromage_and_oignon);
 
         //then
@@ -197,7 +201,7 @@ public class DataRetrieverTest {
     @Test
     @DisplayName("j. Create ingredients Carotte and laitue")
     void createIngredientsCarotteAndLaitue() {
-        //when
+        //given
         List<Ingredient> carotte_and_laitue = List.of(
                 new Ingredient(
                         8,
@@ -216,6 +220,7 @@ public class DataRetrieverTest {
         //then
         Assertions.assertThrows(
                 RuntimeException.class, () -> {
+                    //when
                     dataRetriever.createIngredients(carotte_and_laitue);
                 },
                 "Should throw an exception"
@@ -225,7 +230,7 @@ public class DataRetrieverTest {
     @Test
     @DisplayName("k. Soupe légume with ingredient oignon")
     void soupeLegumeWithIngredientOignon() {
-        //when
+        //given
         Ingredient oignon = new Ingredient(
                 7, "Oignon",
                 500.00,
@@ -238,6 +243,7 @@ public class DataRetrieverTest {
                 List.of(oignon)
         );
 
+        //when
         dataRetriever.saveDish(soupe_legume);
 
         //then
@@ -249,7 +255,7 @@ public class DataRetrieverTest {
     @Test
     @DisplayName("l. Salade fraîche ingredient updated with oignon and fromage")
     void saladeFraicheIngredientUpdatedWithOignonAndFromage() {
-        //when
+        //given
         Dish salade_fraiche = new Dish(
                 1,
                 "Salade fraiche",
@@ -261,6 +267,8 @@ public class DataRetrieverTest {
                         new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
                 )
         );
+
+        //when
         dataRetriever.saveDish(salade_fraiche);
 
         //then
@@ -287,7 +295,7 @@ public class DataRetrieverTest {
     @Test
     @DisplayName("m. Salade fraîche ingredient only fromage")
     void saladeFraicheIngredientOnlyFromage() {
-        //when
+        //given
         Dish salade_fraiche = new Dish(
                 1,
                 "Salade fraiche",
@@ -296,6 +304,8 @@ public class DataRetrieverTest {
                         new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
                 )
         );
+
+        //when
         dataRetriever.saveDish(salade_fraiche);
 
         //then
