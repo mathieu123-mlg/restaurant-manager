@@ -140,18 +140,34 @@ public class DataRetriever {
     public Dish saveDish(Dish dishToSave) {
         String sql =
                 """
-                        insert into dish (id, name, dish_type)
-                        values (?, ?, ?)
+                        insert into dish (id, name, dish_type, price)
+                        values (?, ?, ?, ?)
                         ON conflict (id) DO UPDATE
                             set name  = EXCLUDED.name,
-                            dish_type = EXCLUDED.dish_type;""";
+                            dish_type = EXCLUDED.dish_type,
+                                price = EXCLUDED.price;""";
         Connection databaseConnection = dbConnection.getDBConnection();
         try {
             databaseConnection.setAutoCommit(false);
             PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
-            preparedStatement.setInt(1, dishToSave.getId());
+
+            Integer dishId;
+            if (dishToSave.getId() == null) {
+                dishId = next_id();
+                dishToSave.setId(dishId);
+            } else {
+                dishId = dishToSave.getId();
+            }
+
+            preparedStatement.setInt(1, dishId);
+
             preparedStatement.setString(2, dishToSave.getName());
             preparedStatement.setString(3, dishToSave.getDishType().toString());
+            if (dishToSave.getPrice() == null) {
+                preparedStatement.setNull(4, Types.DOUBLE);
+            } else {
+                preparedStatement.setDouble(4, dishToSave.getPrice());
+            }
 
             preparedStatement.executeUpdate();
             databaseConnection.commit();
@@ -204,6 +220,25 @@ public class DataRetriever {
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
+        } finally {
+            dbConnection.closeDBConnection();
+        }
+    }
+
+    private Integer next_id() {
+        String sql = "select id from dish order by id desc limit 1";
+        Connection databaseConnection = dbConnection.getDBConnection();
+        try {
+            Statement stm = databaseConnection.createStatement();
+            ResultSet rs = stm.executeQuery(sql);
+
+            if (rs.next()) {
+                return rs.getInt(1) + 1;
+            } else {
+                return 1;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         } finally {
             dbConnection.closeDBConnection();
         }
