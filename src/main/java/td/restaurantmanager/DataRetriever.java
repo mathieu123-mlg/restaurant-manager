@@ -1,5 +1,6 @@
 package td.restaurantmanager;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +16,7 @@ public class DataRetriever {
             throw new IllegalArgumentException("Id must be greater than 0");
         }
 
-        String sql = "SELECT id, name, dish_type from dish where id = ?;";
+        String sql = "SELECT id, name, dish_type, price from dish where id = ?;";
         Connection databaseConnection = dbConnection.getDBConnection();
         try {
             PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
@@ -29,7 +30,8 @@ public class DataRetriever {
             Integer id_dish = (Integer) resultSet.getInt("id");
             String name = resultSet.getString("name");
             DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
-            Double price = resultSet.getDouble("price");
+            BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
+            Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
             List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
 
             Dish dishFromDatabase = new Dish(
@@ -71,7 +73,8 @@ public class DataRetriever {
             while (resultSet.next()) {
                 Integer id = (Integer) resultSet.getInt("id");
                 String name = resultSet.getString("name");
-                Double price = resultSet.getDouble("price");
+                BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
+                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
                 CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
                 Integer id_dish = resultSet.getInt("id_dish");
 
@@ -213,7 +216,7 @@ public class DataRetriever {
         Connection databaseConnection = dbConnection.getDBConnection();
         String sql =
                 """
-                        select dish.id, dish.name, dish.dish_type 
+                        select dish.id, dish.name, dish.dish_type, dish.price
                         from dish 
                         join ingredient on ingredient.id_dish = dish.id 
                         where ingredient.name ilike ? 
@@ -228,7 +231,8 @@ public class DataRetriever {
                 Integer id = (Integer) resultSet.getInt("id");
                 String name = resultSet.getString("name");
                 DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
-                Double price = resultSet.getDouble("price");
+                BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
+                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
                 List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
 
                 Dish dish = new Dish(
@@ -286,7 +290,8 @@ public class DataRetriever {
             while (resultSet.next()) {
                 Integer id = (Integer) resultSet.getInt("id");
                 String name = resultSet.getString("name");
-                Double price = resultSet.getDouble("price");
+                BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
+                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
                 CategoryEnum category_type = CategoryEnum.valueOf(resultSet.getString("category"));
                 Integer id_dish = resultSet.getInt("id_dish");
 
@@ -327,7 +332,8 @@ public class DataRetriever {
             while (resultSet.next()) {
                 Integer ingredient_id = (Integer) resultSet.getInt("ingredient_id");
                 String name = resultSet.getString("ingredient_name");
-                Double price = resultSet.getDouble("price");
+                BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
+                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
                 CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
 
                 ingredientFromDB.add(
@@ -377,7 +383,8 @@ public class DataRetriever {
             while (resultSet.next()) {
                 Integer id = (Integer) resultSet.getInt("id");
                 String name = resultSet.getString("name");
-                Double price = resultSet.getDouble("price");
+                BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
+                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
                 CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
                 Integer id_dish = (Integer) resultSet.getInt("id_dish");
 
