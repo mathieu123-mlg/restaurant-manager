@@ -65,6 +65,13 @@ public class Dish {
         return id.equals(dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(ingredients, dish.ingredients);
     }
 
+    public Double getGrossMargin() {
+        if (price == null) {
+            throw new RuntimeException("Cannot calculate marge because price is null");
+        }
+        return getPrice() - getDishCost();
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(id, name, dishType, ingredients);
