@@ -1,11 +1,6 @@
 package td.restaurantmanager;
 
-import java.sql.Statement;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -34,12 +29,14 @@ public class DataRetriever {
             Integer id_dish = (Integer) resultSet.getInt("id");
             String name = resultSet.getString("name");
             DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
+            Double price = resultSet.getDouble("price");
             List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
 
             Dish dishFromDatabase = new Dish(
                     id_dish,
                     name,
                     dish_type,
+                    price,
                     ingredients_list
             );
 
@@ -64,13 +61,13 @@ public class DataRetriever {
                         FROM ingredient
                         order by id LIMIT ? OFFSET ? ;""";
         Connection databaseConnection = dbConnection.getDBConnection();
-        List<Ingredient> ingredientsFromDB = new ArrayList<>();
         try {
             PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
             preparedStatement.setInt(1, size);
             preparedStatement.setInt(2, (page - 1) * size);
             ResultSet resultSet = preparedStatement.executeQuery();
 
+            List<Ingredient> ingredientsFromDB = new ArrayList<>();
             while (resultSet.next()) {
                 Integer id = (Integer) resultSet.getInt("id");
                 String name = resultSet.getString("name");
@@ -231,12 +228,14 @@ public class DataRetriever {
                 Integer id = (Integer) resultSet.getInt("id");
                 String name = resultSet.getString("name");
                 DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
+                Double price = resultSet.getDouble("price");
                 List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
 
                 Dish dish = new Dish(
                         id,
                         name,
                         dish_type,
+                        price,
                         ingredients_list
                 );
 
@@ -315,7 +314,7 @@ public class DataRetriever {
                 """
                         select i.id as ingredient_id, i.name as ingredient_name, i.price, i.category
                         from dish
-                                 left join ingredient i on i.id_dish = dish.id
+                        left join ingredient i on i.id_dish = dish.id
                         where id_dish = ? ;""";
         Connection databaseConnection = dbConnection.getDBConnection();
         try {
@@ -554,7 +553,8 @@ public class DataRetriever {
         } finally {
             try {
                 databaseConnection.setAutoCommit(true);
-            } catch (SQLException _) {}
+            } catch (SQLException _) {
+            }
             dbConnection.closeDBConnection();
         }
     }

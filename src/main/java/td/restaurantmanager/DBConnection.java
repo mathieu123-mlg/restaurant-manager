@@ -1,5 +1,7 @@
 package td.restaurantmanager;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -9,12 +11,14 @@ public class DBConnection {
 
     public Connection getDBConnection() {
         try {
-            String jdbc_url = System.getenv("JDBC_URL");
-            String username = System.getenv("USERNAME");
-            String password = System.getenv("PASSWORD");
+            Dotenv dotenv = Dotenv.load();
+
+            String jdbc_url = dotenv.get("DB_JDBC_URL");
+            String username = dotenv.get("DB_USERNAME");
+            String password = dotenv.get("DB_PASSWORD");
 
             if (jdbc_url == null || username == null || password == null) {
-                throw new RuntimeException("JDBC_URL, USERNAME or PASSWORD NULL");
+                throw new RuntimeException("DB_JDBC_URL, DB_USERNAME or DB_PASSWORD NULL");
             }
 
             connection = DriverManager.getConnection(jdbc_url, username, password);
