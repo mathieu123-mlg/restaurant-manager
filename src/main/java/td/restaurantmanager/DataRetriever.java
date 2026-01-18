@@ -16,34 +16,33 @@ public class DataRetriever {
             throw new IllegalArgumentException("Id must be greater than 0");
         }
 
-        String sql = "SELECT id, name, dish_type, price from dish where id = ?;";
+        String sql =
+                """
+                        SELECT dish.id, dish.name, dish.dish_type, dish.price 
+                        from dish
+                        where dish.id = ?;""";
         Connection databaseConnection = dbConnection.getDBConnection();
         try {
-            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
-            preparedStatement.setInt(1, id);
-            ResultSet resultSet = preparedStatement.executeQuery();
+            PreparedStatement ps = databaseConnection.prepareStatement(sql);
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
 
-            if (!resultSet.next()) {
-                throw new RuntimeException("Dish with id " + id + " not found");
+            if (rs.next()) {
+                List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
+
+                Dish dishFromDatabase = new Dish(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        DishTypeEnum.valueOf(rs.getString("dish_type")),
+                        rs.getObject("price") == null
+                                ? null
+                                : rs.getDouble("price"),
+                        ingredients_list
+                );
+                dishFromDatabase.setIngredients(ingredients_list);
+                return dishFromDatabase;
             }
-
-            Integer id_dish = (Integer) resultSet.getInt("id");
-            String name = resultSet.getString("name");
-            DishTypeEnum dish_type = DishTypeEnum.valueOf(resultSet.getString("dish_type"));
-            BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
-            Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
-            List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
-
-            Dish dishFromDatabase = new Dish(
-                    id_dish,
-                    name,
-                    dish_type,
-                    price,
-                    ingredients_list
-            );
-
-            dishFromDatabase.setIngredients(ingredients_list);
-            return dishFromDatabase;
+            throw new RuntimeException("Dish id=" + id + " not found");
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -286,45 +285,38 @@ public class DataRetriever {
     }
 
     private List<Ingredient> findIngredientsOfDishById(Integer id) {
-        if (id == null) {
-            throw new IllegalArgumentException("Id is required");
-        } else if (id <= 0) {
-            throw new IllegalArgumentException("Id must be greater than 0");
-        }
-
         String sql =
                 """
-                        select i.id as ingredient_id, i.name as ingredient_name, i.price, i.category
-                        from dish
-                        left join ingredient i on i.id_dish = dish.id
-                        where id_dish = ? ;""";
+                        select id_ingredient as id, quantity_required, unit, i.name, i.price, i.category
+                        from dish_ingredient
+                        left join ingredient i on i.id = dish_ingredient.id_ingredient
+                        where dish_ingredient.id_dish = ? ;""";
         Connection databaseConnection = dbConnection.getDBConnection();
         try {
-            PreparedStatement preparedStatement = databaseConnection.prepareStatement(sql);
-            preparedStatement.setInt(1, id);
-            ResultSet resultSet = preparedStatement.executeQuery();
+            PreparedStatement ps = databaseConnection.prepareStatement(sql);
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
 
             List<Ingredient> ingredientFromDB = new ArrayList<>();
 
-            while (resultSet.next()) {
-                Integer ingredient_id = (Integer) resultSet.getInt("ingredient_id");
-                String name = resultSet.getString("ingredient_name");
-                BigDecimal priceBigDecimal = resultSet.getBigDecimal("price");
-                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
-                CategoryEnum category = CategoryEnum.valueOf(resultSet.getString("category"));
-
+            while (rs.next()) {
                 ingredientFromDB.add(
                         new Ingredient(
-                                ingredient_id,
-                                name,
-                                price,
-                                category
+                                rs.getInt("id"),
+                                rs.getString("name"),
+                                rs.getObject("price") == null
+                                        ? null
+                                        : rs.getDouble("price"),
+                                CategoryEnum.valueOf(rs.getString("category")),
+                                rs.getObject("quantity_required") == null
+                                        ? null
+                                        : rs.getDouble("quantity_required"),
+                                UnitType.valueOf(rs.getString("unit"))
                         )
                 );
             }
 
             return ingredientFromDB;
-
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
