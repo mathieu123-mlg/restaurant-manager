@@ -7,8 +7,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DBConnection {
-    private Connection connection;
-
     public Connection getDBConnection() {
         try {
             Dotenv dotenv = Dotenv.load();
@@ -21,23 +19,17 @@ public class DBConnection {
                 throw new RuntimeException("DB_JDBC_URL, DB_USERNAME or DB_PASSWORD NULL");
             }
 
-            connection = DriverManager.getConnection(jdbc_url, username, password);
-            return connection;
+            return DriverManager.getConnection(jdbc_url, username, password);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void closeDBConnection() {
-        if (connection != null) {
-            try {
-                if (!connection.isClosed()) {
-                    connection.close();
-                }
-                connection = null;
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
+    public void closeDBConnection(Connection conn) {
+        try {
+            conn.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }
