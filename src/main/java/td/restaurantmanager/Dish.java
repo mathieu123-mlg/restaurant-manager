@@ -47,9 +47,7 @@ public class Dish {
 
     public void setIngredients(List<Ingredient> ingredients) {
         if (this.ingredients != null) {
-            for (Ingredient ingredient : ingredients) {
-                ingredient.setDish(this);
-            }
+            ingredients.forEach(i -> i.setDish(this));
         }
     }
 
