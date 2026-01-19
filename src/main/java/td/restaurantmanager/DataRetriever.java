@@ -102,6 +102,8 @@ public class DataRetriever {
             }
         } catch (SQLException e) {
             throw new RuntimeException("Erreur lors de la récupération du plat #" + dishId, e);
+        } finally {
+            dbConnection.closeDBConnection();
         }
     }
 
