@@ -8,8 +8,10 @@ public class Ingredient {
     private final Double price;
     private final CategoryEnum category;
     private Dish dish;
+    private Double quantity_required;
+    private UnitType unit;
 
-    public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish) {
+    public Ingredient(Integer id, String name, Double price, CategoryEnum category, Dish dish) {
         this.id = id;
         this.name = name;
         this.price = price;
@@ -17,11 +19,20 @@ public class Ingredient {
         this.dish = dish;
     }
 
-    public Ingredient(int id, String name, Double price, CategoryEnum category) {
+    public Ingredient(Integer id, String name, Double price, CategoryEnum category) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.category = category;
+    }
+
+    public Ingredient(Integer id, String name, Double price, CategoryEnum category, Double quantity_required, UnitType unit) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.category = category;
+        this.quantity_required = quantity_required;
+        this.unit = unit;
     }
 
     public Integer getId() {
@@ -42,6 +53,14 @@ public class Ingredient {
 
     public Dish getDish() {
         return dish;
+    }
+
+    public Double getQuantity_required() {
+        return quantity_required;
+    }
+
+    public UnitType getUnit() {
+        return unit;
     }
 
     public void setDish(Dish dish) {
@@ -70,6 +89,8 @@ public class Ingredient {
                "id=" + id +
                ", name='" + name + '\'' +
                ", price=" + price +
+               ", quantity_required=" + quantity_required +
+               ", unit=" + unit +
                ", category=" + category +
                ", dishName=" + (
                        this.getDishName() == null ?
