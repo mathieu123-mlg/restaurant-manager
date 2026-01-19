@@ -10,97 +10,59 @@ public class DataRetriever {
     private final DBConnection dbConnection = new DBConnection();
 
     public Dish findDishById(Integer id) {
-        if (id == null) {
-            throw new IllegalArgumentException("Id is required");
-        } else if (id <= 0) {
-            throw new IllegalArgumentException("Id must be greater than 0");
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("Id must be positive integer");
         }
 
-        String sql =
-                """
-                        SELECT dish.id, dish.name, dish.dish_type, dish.price 
-                        from dish
-                        where dish.id = ?;""";
+        String sql = """
+                SELECT d.id, d.name, d.dish_type, d.price,
+                       di.id_ingredient, di.quantity_required, di.unit,
+                       i.name AS ing_name, i.price AS ing_price, i.category
+                FROM dish d
+                LEFT JOIN dish_ingredient di ON di.id_dish = d.id
+                LEFT JOIN ingredient i ON i.id = di.id_ingredient
+                WHERE d.id = ?""";
         Connection conn = dbConnection.getDBConnection();
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, id);
-            ResultSet rs = ps.executeQuery();
 
-            if (rs.next()) {
-                List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
+            try (ResultSet rs = ps.executeQuery()) {
+                Dish dish = null;
+                List<Ingredient> ingredients = new ArrayList<>();
 
-                Dish dishFromDatabase = new Dish(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        DishTypeEnum.valueOf(rs.getString("dish_type")),
-                        rs.getObject("price") == null
-                                ? null
-                                : rs.getDouble("price"),
-                        ingredients_list
-                );
-                dishFromDatabase.setIngredients(ingredients_list);
-                return dishFromDatabase;
-            }
-            throw new RuntimeException("Dish id=" + id + " not found");
+                while (rs.next()) {
+                    if (dish == null) {
+                        dish = new Dish(
+                                rs.getInt("id"),
+                                rs.getString("name"),
+                                DishTypeEnum.valueOf(rs.getString("dish_type")),
+                                rs.getObject("price") == null ? null : rs.getDouble("price"),
+                                ingredients
+                        );
+                    }
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            dbConnection.closeDBConnection(conn);
-        }
-    }
-
-    public Dish findDishIngredientByDishId(Integer dishId) {
-        String sql =
-                """
-                        SELECT d.id, d.name AS dish_name, d.dish_type, d.price::numeric AS selling_price,
-                            i.id AS id_ingredient, i.name AS ingredient_name, i.price::numeric, i.category,
-                            di.quantity_required, di.unit
-                        FROM dish d
-                        LEFT JOIN dish_ingredient di ON di.id_dish = d.id
-                        LEFT JOIN ingredient i ON di.id_ingredient = i.id
-                        WHERE d.id = ?""";
-
-        Connection conn = dbConnection.getDBConnection();
-        try {
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, dishId);
-            ResultSet rs = ps.executeQuery();
-
-            Dish dish = null;
-            List<Ingredient> ingredients = new ArrayList<>();
-
-            while (rs.next()) {
-                if (dish == null) {
-                    dish = new Dish(
-                            rs.getInt("id"),
-                            rs.getString("dish_name"),
-                            DishTypeEnum.valueOf(rs.getString("dish_type")),
-                            rs.getBigDecimal("selling_price").doubleValue(),
-                            ingredients
-                    );
+                    if (rs.getObject("id_ingredient") != null) {
+                        ingredients.add(new Ingredient(
+                                rs.getInt("id_ingredient"),
+                                rs.getString("ing_name"),
+                                rs.getDouble("ing_price"),
+                                CategoryEnum.valueOf(rs.getString("category")),
+                                rs.getDouble("quantity_required"),
+                                UnitType.valueOf(rs.getString("unit"))
+                        ));
+                    }
                 }
 
-                ingredients.add(new Ingredient(
-                        rs.getInt("id_ingredient"),
-                        rs.getString("ingredient_name"),
-                        rs.getBigDecimal("price").doubleValue(),
-                        CategoryEnum.valueOf(rs.getString("category")),
-                        rs.getBigDecimal("quantity_required").doubleValue(),
-                        UnitType.valueOf(rs.getString("unit"))
-                ));
-            }
+                if (dish == null) {
+                    throw new RuntimeException("Dish not found: id=" + id);
+                }
 
-            if (dish == null) {
-                throw new RuntimeException("Plat non trouvé : id=" + dishId);
+                dish.setIngredients(dish.getIngredients());
+                return dish;
             }
-
-            dish.setIngredients(dish.getIngredients());
-            return dish;
-            
         } catch (SQLException e) {
-            throw new RuntimeException("Erreur lors de la récupération du plat #" + dishId, e);
+            throw new RuntimeException(e);
         } finally {
             dbConnection.closeDBConnection(conn);
         }
@@ -255,7 +217,7 @@ public class DataRetriever {
                 DishTypeEnum dish_type = DishTypeEnum.valueOf(rs.getString("dish_type"));
                 BigDecimal priceBigDecimal = rs.getBigDecimal("price");
                 Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
-                List<Ingredient> ingredients_list = findIngredientsOfDishById(id);
+                List<Ingredient> ingredients_list = findDishById(id).getIngredients();
 
                 Dish dish = new Dish(
                         id,
@@ -323,46 +285,6 @@ public class DataRetriever {
             }
             return ingredientsFromDB;
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            dbConnection.closeDBConnection(conn);
-        }
-    }
-
-    private List<Ingredient> findIngredientsOfDishById(Integer id) {
-        String sql =
-                """
-                        select id_ingredient as id, quantity_required, unit, i.name, i.price, i.category
-                        from dish_ingredient
-                        left join ingredient i on i.id = dish_ingredient.id_ingredient
-                        where dish_ingredient.id_dish = ? ;""";
-        Connection conn = dbConnection.getDBConnection();
-        try {
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, id);
-            ResultSet rs = ps.executeQuery();
-
-            List<Ingredient> ingredientFromDB = new ArrayList<>();
-
-            while (rs.next()) {
-                ingredientFromDB.add(
-                        new Ingredient(
-                                rs.getInt("id"),
-                                rs.getString("name"),
-                                rs.getObject("price") == null
-                                        ? null
-                                        : rs.getDouble("price"),
-                                CategoryEnum.valueOf(rs.getString("category")),
-                                rs.getObject("quantity_required") == null
-                                        ? null
-                                        : rs.getDouble("quantity_required"),
-                                UnitType.valueOf(rs.getString("unit"))
-                        )
-                );
-            }
-
-            return ingredientFromDB;
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
