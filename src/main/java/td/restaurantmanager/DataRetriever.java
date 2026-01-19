@@ -75,11 +75,11 @@ public class DataRetriever {
 
         String sql =
                 """
-                        SELECT i.id, i.name, i.price, i.category, 
-                               dish_ingredient.quantity_required, dish_ingredient.unit, dish_ingredient.id_dish
-                        FROM dish_ingredient
-                        LEFT JOIN ingredient i on dish_ingredient.id_ingredient = i.id
-                        order by id LIMIT ? OFFSET ? ;""";
+                        SELECT id_ingredient, i.name, i.price, i.category, 
+                               di.quantity_required, di.unit, di.id_dish
+                        FROM dish_ingredient di
+                        LEFT JOIN ingredient i on di.id_ingredient = i.id
+                        order by i.id LIMIT ? OFFSET ? ;""";
         Connection conn = dbConnection.getDBConnection();
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
@@ -91,7 +91,7 @@ public class DataRetriever {
             while (rs.next()) {
                 Integer dishId = rs.getInt("id_dish");
                 ingredientsFromDB.add(new Ingredient(
-                        dishId,
+                        rs.getInt("id_ingredient"),
                         rs.getString("name"),
                         rs.getObject("price") == null ? null : rs.getDouble("price"),
                         CategoryEnum.valueOf(rs.getString("category")),
