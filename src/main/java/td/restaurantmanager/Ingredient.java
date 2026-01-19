@@ -35,6 +35,16 @@ public class Ingredient {
         this.unit = unit;
     }
 
+    public Ingredient(Integer id, String name, Double price, CategoryEnum category, Dish dish, Double quantity_required, UnitType unit) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.category = category;
+        this.dish = dish;
+        this.quantity_required = quantity_required;
+        this.unit = unit;
+    }
+
     public Integer getId() {
         return id;
     }
