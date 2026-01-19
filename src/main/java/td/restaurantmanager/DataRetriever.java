@@ -51,6 +51,60 @@ public class DataRetriever {
         }
     }
 
+    public Dish findDishIngredientByDishId(int dishId) {
+        String sql =
+                """
+                        SELECT 
+                            d.id, d.name AS dish_name, d.dish_type, d.price AS selling_price,
+                            i.id AS id_ingredient, i.name AS ingredient_name, i.price, i.category,
+                            di.quantity_required, di.unit
+                        FROM dish_ingredient di
+                        JOIN dish d ON di.id_dish = d.id
+                        JOIN ingredient i ON di.id_ingredient = i.id
+                        WHERE d.id = ?""";
+
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, dishId);
+            try (ResultSet rs = ps.executeQuery()) {
+
+                Dish dish = null;
+                List<Ingredient> ingredients = new ArrayList<>();
+
+                while (rs.next()) {
+                    if (dish == null) {
+                        dish = new Dish(
+                                rs.getInt("id"),
+                                rs.getString("dish_name"),
+                                DishTypeEnum.valueOf(rs.getString("dish_type")),
+                                rs.getBigDecimal("selling_price").doubleValue(),
+                                ingredients
+                        );
+                    }
+
+                    ingredients.add(new Ingredient(
+                            rs.getInt("id_ingredient"),
+                            rs.getString("ingredient_name"),
+                            rs.getBigDecimal("price").doubleValue(),
+                            CategoryEnum.valueOf(rs.getString("category")),
+                            rs.getBigDecimal("quantity_required").doubleValue(),
+                            UnitType.valueOf(rs.getString("unit"))
+                    ));
+                }
+
+                if (dish == null) {
+                    throw new RuntimeException("Plat non trouvé : id=" + dishId);
+                }
+
+                dish.setIngredients(ingredients);
+                return dish;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la récupération du plat #" + dishId, e);
+        }
+    }
+
     public List<Ingredient> findIngredients(int page, int size) {
         if (page <= 0 || size <= 0) {
             throw new IllegalArgumentException("Page and size must be greater than 0");
