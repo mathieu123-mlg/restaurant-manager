@@ -1,6 +1,5 @@
 package td.restaurantmanager;
 
-import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -87,21 +86,7 @@ public class DataRetriever {
             ps.setInt(2, (page - 1) * size);
             ResultSet rs = ps.executeQuery();
 
-            List<Ingredient> ingredientsFromDB = new ArrayList<>();
-            while (rs.next()) {
-                Integer dishId = rs.getInt("id_dish");
-                ingredientsFromDB.add(new Ingredient(
-                        rs.getInt("id_ingredient"),
-                        rs.getString("name"),
-                        rs.getObject("price") == null ? null : rs.getDouble("price"),
-                        CategoryEnum.valueOf(rs.getString("category")),
-                        findDishById(dishId),
-                        rs.getObject("quantity_required") == null ? null : rs.getDouble("quantity_required"),
-                        UnitType.valueOf(rs.getString("unit"))
-                ));
-            }
-
-            return ingredientsFromDB;
+            return getIngredients(rs);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -244,23 +229,20 @@ public class DataRetriever {
 
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
         if (page <= 0 || size <= 0) {
-            throw new IllegalArgumentException("page or size null");
+            throw new IllegalArgumentException("page or size equal zero");
         }
         StringBuilder sql = new StringBuilder(
                 """
-                        select 
-                            ingredient.id, 
-                            ingredient.name,
-                            ingredient.price,
-                            ingredient.category,
-                            ingredient.id_dish
-                        from ingredient
-                        join dish on dish.id = ingredient.id_dish
+                        select di.id_ingredient, i.name, i.price, i.category,
+                            di.id_dish, di.quantity_required, di.unit
+                        from ingredient i
+                        left join dish_ingredient di on i.id = di.id_ingredient
+                        left join dish d on d.id = di.id_dish
                         where 1 = 1"""
         );
         Connection conn = dbConnection.getDBConnection();
         try {
-            PreparedStatement ps = SQLBuildParams_findIngredientsByCriteria(
+            PreparedStatement ps = buildIngredientsSearchStatement(
                     sql,
                     ingredientName,
                     category,
@@ -272,26 +254,31 @@ public class DataRetriever {
 
             ps.executeQuery();
             ResultSet rs = ps.getResultSet();
-            List<Ingredient> ingredientsFromDB = new ArrayList<>();
-            while (rs.next()) {
-                Integer id = (Integer) rs.getInt("id");
-                String name = rs.getString("name");
-                BigDecimal priceBigDecimal = rs.getBigDecimal("price");
-                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
-                CategoryEnum category_type = CategoryEnum.valueOf(rs.getString("category"));
-                Integer id_dish = rs.getInt("id_dish");
-
-                Ingredient ingredient = new Ingredient(id, name, price, category_type);
-                ingredient.setDish(findDishById(id_dish));
-                ingredientsFromDB.add(ingredient);
-            }
-            return ingredientsFromDB;
-
+            return getIngredients(rs);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
             dbConnection.closeDBConnection(conn);
         }
+    }
+
+    private List<Ingredient> getIngredients(ResultSet rs) throws SQLException {
+        List<Ingredient> ingredientsFromDB = new ArrayList<>();
+        while (rs.next()) {
+            Integer dishId = rs.getInt("id_dish");
+
+            ingredientsFromDB.add(new Ingredient(
+                    rs.getInt("id_ingredient"),
+                    rs.getString("name"),
+                    rs.getObject("price") == null ? null : rs.getDouble("price"),
+                    CategoryEnum.valueOf(rs.getString("category")),
+                    findDishById(dishId),
+                    rs.getObject("quantity_required") == null ? null : rs.getDouble("quantity_required"),
+                    UnitType.valueOf(rs.getString("unit"))
+            ));
+        }
+
+        return ingredientsFromDB;
     }
 
     private void SQLBuildParams_createIngredients(Ingredient newIngredient, PreparedStatement ps) {
@@ -311,42 +298,81 @@ public class DataRetriever {
         }
     }
 
-    private PreparedStatement SQLBuildParams_findIngredientsByCriteria(StringBuilder sql, String ingredientName, CategoryEnum category, String dishName, Connection conn, int page, int size) {
-        try {
-            if (ingredientName != null) {
-                sql.append(" and ingredient.name ilike ? ");
-            }
-            if (category != null) {
-                sql.append(" and ingredient.category ilike ? ");
-            }
-            if (dishName != null) {
-                sql.append(" and dish.name ilike ? ");
-            }
-            sql.append(" order by ingredient.id");
-            sql.append(" limit ? offset ? ;");
+    //    private PreparedStatement SQLBuildParams_findIngredientsByCriteria(StringBuilder sql, String ingredientName, CategoryEnum category, String dishName, Connection conn, int page, int size) {
+//        try {
+//            if (ingredientName != null) {
+//                sql.append(" and i.name ilike ? ");
+//            }
+//            if (category != null) {
+//                sql.append(" and i.category ilike ? ");
+//            }
+//            if (dishName != null) {
+//                sql.append(" and d.name ilike ? ");
+//            }
+//            sql.append(" order by i.id");
+//            sql.append(" limit ? offset ? ;");
+//
+//            PreparedStatement ps = conn.prepareStatement(sql.toString());
+//            int i = 0;
+//            if (ingredientName != null) {
+//                ps.setString(i + 1, "%" + ingredientName + "%");
+//                i += 1;
+//            }
+//            if (category != null) {
+//                ps.setString(i + 1, "%" + category.toString() + "%");
+//                i += 1;
+//            }
+//            if (dishName != null) {
+//                ps.setString(i + 1, "%" + dishName + "%");
+//                i += 1;
+//            }
+//            ps.setInt(i + 1, size);
+//            i += 1;
+//            ps.setInt(i + 1, (page - 1) * size);
+//
+//            return ps;
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+    private PreparedStatement buildIngredientsSearchStatement(
+            StringBuilder sql,
+            String ingredientName,
+            CategoryEnum category,
+            String dishName,
+            Connection conn,
+            int page,
+            int size) throws SQLException {
 
-            PreparedStatement ps = conn.prepareStatement(sql.toString());
-            int i = 0;
-            if (ingredientName != null) {
-                ps.setString(i + 1, "%" + ingredientName + "%");
-                i += 1;
-            }
-            if (category != null) {
-                ps.setString(i + 1, "%" + category.toString() + "%");
-                i += 1;
-            }
-            if (dishName != null) {
-                ps.setString(i + 1, "%" + dishName + "%");
-                i += 1;
-            }
-            ps.setInt(i + 1, size);
-            i += 1;
-            ps.setInt(i + 1, (page - 1) * size);
+        List<Object> params = new ArrayList<>();
 
-            return ps;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        if (ingredientName != null && !ingredientName.trim().isEmpty()) {
+            sql.append(" AND i.name ILIKE ?");
+            params.add("%" + ingredientName.trim() + "%");
         }
+
+        if (category != null) {
+            sql.append(" AND i.category = ?");
+            params.add(category.name());
+        }
+
+        if (dishName != null && !dishName.trim().isEmpty()) {
+            sql.append(" AND d.name ILIKE ?");
+            params.add("%" + dishName.trim() + "%");
+        }
+
+        sql.append(" ORDER BY i.id LIMIT ? OFFSET ?");
+        PreparedStatement ps = conn.prepareStatement(sql.toString());
+
+        int index = 1;
+        for (Object param : params) {
+            ps.setObject(index++, param);
+        }
+
+        ps.setInt(index++, size);
+        ps.setInt(index, (page - 1) * size);
+
+        return ps;
     }
 
     private Integer next_id() {
@@ -418,7 +444,7 @@ public class DataRetriever {
             for (Ingredient ingredient : ingredients) {
                 ps.setInt(1, dishId);
                 ps.setInt(2, ingredient.getId());
-                ps.addBatch(); // Can be substitute ps.executeUpdate() but bad performance
+                ps.addBatch();
             }
             ps.executeBatch();
         }
