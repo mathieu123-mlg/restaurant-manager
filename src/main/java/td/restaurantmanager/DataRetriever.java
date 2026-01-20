@@ -346,7 +346,7 @@ public class DataRetriever {
 
         List<Object> params = new ArrayList<>();
 
-        if (ingredientName != null && !ingredientName.trim().isEmpty()) {
+        if (ingredientName != null) {
             sql.append(" AND i.name ILIKE ?");
             params.add("%" + ingredientName.trim() + "%");
         }
@@ -356,7 +356,7 @@ public class DataRetriever {
             params.add(category.name());
         }
 
-        if (dishName != null && !dishName.trim().isEmpty()) {
+        if (dishName != null) {
             sql.append(" AND d.name ILIKE ?");
             params.add("%" + dishName.trim() + "%");
         }
