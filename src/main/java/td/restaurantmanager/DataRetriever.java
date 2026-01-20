@@ -165,7 +165,8 @@ public class DataRetriever {
                             dish_type = EXCLUDED.dish_type
                         RETURNING id""";
 
-        try (Connection conn = dbConnection.getDBConnection()) {
+        Connection conn = dbConnection.getDBConnection();
+        try {
             conn.setAutoCommit(false);
             Integer dishId;
             try (PreparedStatement ps = conn.prepareStatement(upsertDishSql)) {
@@ -195,6 +196,8 @@ public class DataRetriever {
             return findDishById(dishId);
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection(conn);
         }
     }
 
@@ -202,14 +205,15 @@ public class DataRetriever {
         if (ingredientsName == null || ingredientsName.trim().isEmpty()) {
             throw new IllegalArgumentException("ingredientsName is null or empty");
         }
-        Connection conn = dbConnection.getDBConnection();
         String sql =
                 """
-                        select dish.id, dish.name, dish.dish_type, dish.price
-                        from dish 
-                        join ingredient on ingredient.id_dish = dish.id 
-                        where ingredient.name ilike ? 
+                        select di.id_dish, dish.name, dish.dish_type, dish.price
+                        from dish
+                        left join dish_ingredient di on di.id_dish = dish.id 
+                        left join ingredient i on di.id_ingredient = i.id 
+                        where i.name ilike ? 
                         order by dish.id;""";
+        Connection conn = dbConnection.getDBConnection();
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, "%" + ingredientsName + "%");
@@ -217,19 +221,13 @@ public class DataRetriever {
 
             List<Dish> dishFromDatabase = new ArrayList<>();
             while (rs.next()) {
-                Integer id = (Integer) rs.getInt("id");
-                String name = rs.getString("name");
-                DishTypeEnum dish_type = DishTypeEnum.valueOf(rs.getString("dish_type"));
-                BigDecimal priceBigDecimal = rs.getBigDecimal("price");
-                Double price = (priceBigDecimal != null) ? priceBigDecimal.doubleValue() : null;
-                List<Ingredient> ingredients_list = findDishById(id).getIngredients();
-
+                Integer dishId = rs.getInt("id_dish");
                 Dish dish = new Dish(
-                        id,
-                        name,
-                        dish_type,
-                        price,
-                        ingredients_list
+                        dishId,
+                        rs.getString("name"),
+                        DishTypeEnum.valueOf(rs.getString("dish_type")),
+                        rs.getObject("price") == null ? null : rs.getDouble("price"),
+                        findDishById(dishId).getIngredients()
                 );
 
                 dish.setIngredients(dish.getIngredients());
@@ -237,7 +235,6 @@ public class DataRetriever {
             }
 
             return dishFromDatabase;
-
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
