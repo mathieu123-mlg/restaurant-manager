@@ -1,11 +1,15 @@
 \c mini_dish_db
 
+create type dish_type as enum ('STARTER', 'MAIN', 'DESSERT');
+
 create table dish
 (
     id        serial primary key,
     name      varchar   not null,
     dish_type dish_type not null default 'STARTER'
 );
+
+create type category as enum ('VEGETABLE', 'ANIMAL', 'MARINE', 'DAIRY', 'OTHER');
 
 create table ingredient
 (
@@ -39,25 +43,3 @@ where name = 'Gâteau au chocolat';
 update dish
 set price = null
 where name = 'Salade de fruit';
-
-
-
-create type dish_type as enum ('STARTER', 'MAIN', 'DESSERT');
-create type category as enum ('VEGETABLE', 'ANIMAL', 'MARINE', 'DAIRY', 'OTHER');
-
-ALTER TABLE dish
-    ALTER COLUMN dish_type drop default;
-
-ALTER TABLE dish
-    ALTER COLUMN dish_type
-        TYPE dish_type
-        USING dish_type::varchar(20)::dish_type;
-
-ALTER TABLE dish
-    ALTER COLUMN dish_type
-        SET DEFAULT 'STARTER'::dish_type;
-
-ALTER TABLE ingredient
-    ALTER COLUMN category
-        TYPE category
-        USING category::varchar(20)::category;
