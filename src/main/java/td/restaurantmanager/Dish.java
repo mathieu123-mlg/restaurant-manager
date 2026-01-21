@@ -45,12 +45,6 @@ public class Dish {
         return ingredients;
     }
 
-    public void setIngredients(List<Ingredient> ingredients) {
-        if (this.ingredients != null) {
-            ingredients.forEach(i -> i.setDish(this));
-        }
-    }
-
     public Double getDishCost() {
         return ingredients.stream().mapToDouble(Ingredient::getPrice).sum();
     }

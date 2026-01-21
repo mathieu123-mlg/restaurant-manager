@@ -16,8 +16,7 @@ create table ingredient
     id       serial primary key,
     name     varchar unique not null,
     price    numeric(10, 2) default 0,
-    category category       NOT NULL,
-    id_dish  int references dish (id)
+    category category       NOT NULL
 );
 
 
