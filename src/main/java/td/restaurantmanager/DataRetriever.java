@@ -3,7 +3,6 @@ package td.restaurantmanager;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class DataRetriever {
@@ -15,7 +14,7 @@ public class DataRetriever {
         }
 
         String sql = """
-                SELECT d.id, d.name, d.dish_type, d.price,
+                SELECT d.id, d.name, d.dish_type, d.selling_price,
                        di.id_ingredient, di.quantity_required, di.unit,
                        i.name AS ing_name, i.price AS ing_price, i.category
                 FROM dish d
@@ -37,7 +36,7 @@ public class DataRetriever {
                                 rs.getInt("id"),
                                 rs.getString("name"),
                                 DishTypeEnum.valueOf(rs.getString("dish_type")),
-                                rs.getObject("price") == null ? null : rs.getDouble("price"),
+                                rs.getObject("selling_price") == null ? null : rs.getDouble("selling_price"),
                                 ingredients
                         );
                     }
@@ -141,11 +140,11 @@ public class DataRetriever {
     public Dish saveDish(Dish dishToSave) {
         String upsertDishSql =
                 """
-                        INSERT INTO dish (id, price, name, dish_type)
+                        INSERT INTO dish (id, selling_price, name, dish_type)
                         VALUES (?, ?, ?, ?::dish_type)
                         ON CONFLICT (id) DO UPDATE
                         SET name = EXCLUDED.name,
-                            price = EXCLUDED.price,
+                            selling_price = EXCLUDED.selling_price,
                             dish_type = EXCLUDED.dish_type
                         RETURNING id""";
 
@@ -160,8 +159,8 @@ public class DataRetriever {
                 } else {
                     ps.setInt(1, next_id());
                 }
-                if (dishToSave.getPrice() != null) {
-                    ps.setDouble(2, dishToSave.getPrice());
+                if (dishToSave.getSelling_price() != null) {
+                    ps.setDouble(2, dishToSave.getSelling_price());
                 } else {
                     ps.setNull(2, Types.DOUBLE);
                 }
@@ -176,11 +175,10 @@ public class DataRetriever {
             }
 
             List<Ingredient> newIngredients = dishToSave.getIngredients();
-            List<Ingredient> older_dish_ingredient = findDishById(dishToSave.getId()).getIngredients();
-//
-            detachIngredients(conn, dishId, older_dish_ingredient, newIngredients);
-//            attachIngredients(conn, dishId, older_dish_ingredient, newIngredients);
-//            conn.commit();
+            detachIngredients(conn, dishId, newIngredients);
+            attachIngredients(conn, dishId, newIngredients);
+
+            conn.commit();
             return dishToSave;
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -195,7 +193,7 @@ public class DataRetriever {
         }
         String sql =
                 """
-                        select di.id_dish, dish.name, dish.dish_type, dish.price
+                        select di.id_dish, dish.name, dish.dish_type, dish.selling_price
                         from dish
                         left join dish_ingredient di on di.id_dish = dish.id 
                         left join ingredient i on di.id_ingredient = i.id 
@@ -214,7 +212,7 @@ public class DataRetriever {
                         dishId,
                         rs.getString("name"),
                         DishTypeEnum.valueOf(rs.getString("dish_type")),
-                        rs.getObject("price") == null ? null : rs.getDouble("price"),
+                        rs.getObject("selling_price") == null ? null : rs.getDouble("selling_price"),
                         findDishById(dishId).getIngredients()
                 );
 
@@ -351,31 +349,7 @@ public class DataRetriever {
         }
     }
 
-    private List<Integer> notRattachedIngredientsID(List<Ingredient> ingredients, List<Ingredient> ingredientToSave) {
-        if (ingredients == null || ingredientToSave == null || ingredientToSave.isEmpty() || ingredients.isEmpty()) {
-            return List.of();
-        }
-
-        return ingredients.stream()
-                .filter(i -> !ingredientToSave.contains(i))
-                .filter(Objects::nonNull)
-                .map(Ingredient::getId)
-                .collect(Collectors.toList());
-    }
-
-    private List<Integer> rattachedIngredientsId(List<Ingredient> ingredients, List<Ingredient> ingredientToSave) {
-        if (ingredients == null || ingredientToSave == null || ingredientToSave.isEmpty() || ingredients.isEmpty()) {
-            return List.of();
-        }
-
-        return ingredients.stream()
-                .filter(ingredientToSave::contains)
-                .filter(Objects::nonNull)
-                .map(i -> i.getId())
-                .collect(Collectors.toList());
-    }
-
-    private void detachIngredients(Connection conn, Integer dishId, List<Ingredient> dish_ingredient, List<Ingredient> ingredientsToSave)
+    private void detachIngredients(Connection conn, Integer dishId, List<Ingredient> ingredientsToSave)
             throws SQLException {
 
         if (ingredientsToSave == null || ingredientsToSave.isEmpty()) {
@@ -383,44 +357,14 @@ public class DataRetriever {
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM dish_ingredient WHERE id_dish = ?")) {
                 ps.setInt(1, dishId);
                 ps.executeUpdate();
-                System.out.println("sql1 ?: DELETE FROM dish_ingredient WHERE id_dish = "+dishId);
+                System.out.println("sql1 ?: DELETE FROM dish_ingredient WHERE id_dish = " + dishId);
             }
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE ingredient SET id_dish = NULL WHERE id_dish = ?")) {
-                ps.setInt(1, dishId);
-                ps.executeUpdate();
-                System.out.println("sql2 ?: UPDATE ingredient SET id_dish = NULL WHERE id_dish = "+dishId);
-            }
-
             return;
         }
 
-        String delete_dish_ingredient = """
-                DELETE FROM dish_ingredient WHERE id_dish = ? and id_ingredient = (%s);""";
-
-        try {
-            List<Integer> detached_ingredient_id = notRattachedIngredientsID(dish_ingredient, ingredientsToSave);
-
-            String inClause = detached_ingredient_id.stream()
-                    .map(i -> "?")
-                    .collect(Collectors.joining(","));
-
-            delete_dish_ingredient = String.format(
-                    delete_dish_ingredient,
-                    String.join(", ", inClause)
-            );
-            PreparedStatement ps = conn.prepareStatement(delete_dish_ingredient);
-            ps.setInt(1, dishId);
-            ps.executeUpdate();
-            System.out.println("delete_dish_ingredient ?: " + delete_dish_ingredient);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
         String baseSql = """
-                    UPDATE ingredient
-                    SET id_dish = NULL
-                    WHERE id_dish = ? AND id NOT IN (%s)
-                """;
+                    DELETE from dish_ingredient
+                    WHERE id_dish = ? AND id NOT IN (%s)""";
 
         String inClause = ingredientsToSave.stream()
                 .map(i -> "?")
@@ -439,14 +383,14 @@ public class DataRetriever {
         }
     }
 
-    private void attachIngredients(Connection conn, Integer dishId, List<Ingredient> dish_ingredient, List<Ingredient> ingredientsToSave)
+    private void attachIngredients(Connection conn, Integer dishId, List<Ingredient> ingredientsToSave)
             throws SQLException {
         if (ingredientsToSave == null || ingredientsToSave.isEmpty()) {
             return;
         }
 
         String attachSql = """
-                    UPDATE ingredient
+                    UPDATE dish_ingredient
                     SET id_dish = ?
                     WHERE id = ?
                 """;
@@ -469,21 +413,21 @@ public class DataRetriever {
         String resetSequenceIngredient = "ALTER SEQUENCE ingredient_id_seq RESTART WITH 1;";
 
         String initialDish = """
-                INSERT INTO dish (id, name, dish_type)
-                VALUES (1, 'Salade fraîche', 'STARTER'),
-                       (2, 'Poulet grillé', 'MAIN'),
-                       (3, 'Riz au légume', 'MAIN'),
-                       (4, 'Gâteau aux chocolat', 'DESSERT'),
-                       (5, 'Salade de fruits', 'DESSERT');
+                insert into dish (id, name, dish_type, selling_price)
+                VALUES (1, 'Salade fraîche', 'STARTER', 3500.00),
+                       (2, 'Poulet grillé', 'MAIN', 12000.00),
+                       (3, 'Riz au légume', 'MAIN', null),
+                       (4, 'Gâteau aux chocolat', 'DESSERT', 8000.00),
+                       (5, 'Salade de fruits', 'DESSERT', null);
                 """;
 
         String initialIngredient = """
-                INSERT INTO ingredient (id, name, price, category, id_dish)
-                VALUES (1, 'Laitue', 800.00, 'VEGETABLE', 1),
-                       (2, 'Tomate', 600.00, 'VEGETABLE', 1),
-                       (3, 'Poulet', 4500.00, 'ANIMAL', 2),
-                       (4, 'Chocolat', 3000.00, 'OTHER', 4),
-                       (5, 'Beurre', 2500.00, 'DAIRY', 4);
+                INSERT INTO ingredient (id, name, price, category)
+                VALUES (1, 'Laitue', 800.00, 'VEGETABLE'),
+                       (2, 'Tomate', 600.00, 'VEGETABLE'),
+                       (3, 'Poulet', 4500.00, 'ANIMAL'),
+                       (4, 'Chocolat', 3000.00, 'OTHER'),
+                       (5, 'Beurre', 2500.00, 'DAIRY');
                 """;
         Connection conn = dbConnection.getDBConnection();
 
