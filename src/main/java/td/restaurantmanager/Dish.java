@@ -8,7 +8,7 @@ public class Dish {
     private final String name;
     private final DishTypeEnum dishType;
     private final List<Ingredient> ingredients;
-    private Double price;
+    private Double selling_price;
 
     public Dish(int id, String name, DishTypeEnum dishType, List<Ingredient> ingredients) {
         this.id = id;
@@ -17,11 +17,11 @@ public class Dish {
         this.ingredients = ingredients;
     }
 
-    public Dish(Integer id, String name, DishTypeEnum dishType, Double price, List<Ingredient> ingredients) {
+    public Dish(Integer id, String name, DishTypeEnum dishType, Double selling_price, List<Ingredient> ingredients) {
         this.id = id;
         this.name = name;
         this.dishType = dishType;
-        this.price = price;
+        this.selling_price = selling_price;
         this.ingredients = ingredients;
     }
 
@@ -37,8 +37,8 @@ public class Dish {
         return dishType;
     }
 
-    public Double getPrice() {
-        return price;
+    public Double getSelling_price() {
+        return selling_price;
     }
 
     public List<Ingredient> getIngredients() {
@@ -57,10 +57,10 @@ public class Dish {
     }
 
     public Double getGrossMargin() {
-        if (price == null) {
-            throw new RuntimeException("Cannot calculate marge because price is null");
+        if (selling_price == null) {
+            throw new RuntimeException("Cannot calculate marge because selling_price is null");
         }
-        return getPrice() - getDishCost();
+        return getSelling_price() - getDishCost();
     }
 
     @Override
@@ -74,7 +74,7 @@ public class Dish {
                "id=" + id +
                ", name='" + name + '\'' +
                ", dishType=" + dishType +
-               ", price=" + price +
+               ", selling_price=" + selling_price +
                ", ingredients=" + ingredients +
                '}';
     }
