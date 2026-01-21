@@ -19,26 +19,5 @@ create table ingredient
     category category       NOT NULL
 );
 
-
 alter table dish
-    add price numeric(10, 2) default null;
-
-update dish
-set price = 2000
-where name = 'Salade fraîche';
-
-update dish
-set price = 6000
-where name = 'Poulet grillé';
-
-update dish
-set price = null
-where name = 'Riz au légume';
-
-update dish
-set price = null
-where name = 'Gâteau au chocolat';
-
-update dish
-set price = null
-where name = 'Salade de fruit';
+    rename column price to selling_price;
