@@ -34,9 +34,9 @@ public class DataRetriever {
 
             while (rs.next()) {
                 if (dish == null) {
-                    dish = createDish(rs, dishIngredients);
+                    dish = getDishFromDb(rs, dishIngredients);
                 }
-                dishIngredients.add(createDishIngredient(rs, dish));
+                dishIngredients.add(getDishIngredientFromDb(rs, dish));
             }
 
             if (dish == null) {
@@ -51,34 +51,39 @@ public class DataRetriever {
         }
     }
 
+    public List<Ingredient> findIngredients(int page, int size) {
+        if (page <= 0 || size <= 0) {
+            throw new IllegalArgumentException("Page and size must be greater than 0");
+        }
+
+        String sql = """
+                SELECT i.id, i.name, i.price, i.category,
+                       di.quantity_required, di.unit, di.id_dish
+                FROM dish_ingredient di
+                right JOIN ingredient i on di.id_ingredient = i.id
+                order by i.id LIMIT ? OFFSET ?;""";
+
+        Connection conn = dbConnection.getDBConnection();
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, size);
+            ps.setInt(2, (page - 1) * size);
+            ResultSet rs = ps.executeQuery();
+
+            List<Ingredient> ingredientsFromDB = new ArrayList<>();
+            while (rs.next()) {
+                ingredientsFromDB.add(getIngredientFromDB(rs));
+            }
+
+            return ingredientsFromDB;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection(conn);
+        }
+    }
+
     //
-//    public List<Ingredient> findIngredients(int page, int size) {
-//        if (page <= 0 || size <= 0) {
-//            throw new IllegalArgumentException("Page and size must be greater than 0");
-//        }
-//
-//        String sql = """
-//                SELECT id_ingredient, i.name, i.price, i.category,
-//                       di.quantity_required, di.unit, di.id_dish
-//                FROM dish_ingredient di
-//                LEFT JOIN ingredient i on di.id_ingredient = i.id
-//                order by i.id LIMIT ? OFFSET ?;""";
-//
-//        Connection conn = dbConnection.getDBConnection();
-//        try {
-//            PreparedStatement ps = conn.prepareStatement(sql);
-//            ps.setInt(1, size);
-//            ps.setInt(2, (page - 1) * size);
-//            ResultSet rs = ps.executeQuery();
-//
-//            return getIngredients(rs);
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        } finally {
-//            dbConnection.closeDBConnection(conn);
-//        }
-//    }
-//
 //    public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
 //        if (newIngredients == null || newIngredients.isEmpty()) {
 //            return List.of();
@@ -299,21 +304,18 @@ public class DataRetriever {
 //        return null;
 //    }
 //
-//    private List<Ingredient> getIngredients(ResultSet rs) throws SQLException {
-//        List<Ingredient> ingredientsFromDB = new ArrayList<>();
-//        while (rs.next()) {
-//            ingredientsFromDB.add(new Ingredient(
-//                    rs.getInt("id_ingredient"),
-//                    rs.getString("name"),
-//                    rs.getObject("price") == null ? null : rs.getDouble("price"),
-//                    CategoryEnum.valueOf(rs.getString("category")),
-//                    rs.getObject("quantity_required") == null ? null : rs.getDouble("quantity_required"),
-//                    UnitType.valueOf(rs.getString("unit"))
-//            ));
-//        }
-//
-//        return ingredientsFromDB;
-//    }
+
+    private Ingredient getIngredientFromDB(ResultSet rs) throws SQLException {
+        return new Ingredient(
+                rs.getInt("id"),
+                rs.getString("name"),
+                getNullableDouble(rs, "price"),
+                CategoryEnum.valueOf(rs.getString("category")),
+                getNullableDouble(rs, "quantity_required"),
+                rs.getString("unit") == null
+                        ? UnitType.KG
+                        : UnitType.valueOf(rs.getString("unit")));
+    }
 //
 //    private void buildIngredientsCreationStatement(Ingredient newIngredient, PreparedStatement ps) {
 //        try {
@@ -498,7 +500,7 @@ public class DataRetriever {
 //        }
 //    }
 
-    private Dish createDish(ResultSet rs, List<DishIngredient> dishIngredients) throws SQLException {
+    private Dish getDishFromDb(ResultSet rs, List<DishIngredient> dishIngredients) throws SQLException {
         return new Dish(
                 rs.getInt("id_dish"),
                 rs.getString("dish_name"),
@@ -508,18 +510,11 @@ public class DataRetriever {
         );
     }
 
-    private DishIngredient createDishIngredient(ResultSet rs, Dish dish) throws SQLException {
-        Ingredient ingredient = new Ingredient(
-                rs.getInt("id_ingredient"),
-                rs.getString("ingredient_name"),
-                rs.getDouble("price"),
-                CategoryEnum.valueOf(rs.getString("category"))
-        );
-
+    private DishIngredient getDishIngredientFromDb(ResultSet rs, Dish dish) throws SQLException {
         return new DishIngredient(
                 rs.getInt("id"),
                 dish,
-                ingredient,
+                getIngredientFromDB(rs),
                 getNullableDouble(rs, "quantity_required"),
                 UnitType.valueOf(rs.getString("unit"))
         );
