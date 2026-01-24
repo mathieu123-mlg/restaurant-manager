@@ -18,3 +18,12 @@ create table ingredient
     price    numeric(10, 2) default 0,
     category ingredient_category NOT NULL
 );
+
+alter table dish
+    add column price numeric(10, 2);
+
+update dish set price = 2000 where dish.name like 'Salade fraîche';
+update dish set price = 6000 where dish.name like 'Poulet grillé';
+
+alter table dish
+    rename price to selling_price;
