@@ -7,22 +7,24 @@ public class Ingredient {
     private final String name;
     private final Double price;
     private final CategoryEnum category;
-    private Double quantity_required;
-    private UnitType unit;
+    private final Double quantityRequired;
+    private final UnitType unit;
 
     public Ingredient(Integer id, String name, Double price, CategoryEnum category) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.category = category;
+        this.quantityRequired = null;
+        this.unit = UnitType.KG;
     }
 
-    public Ingredient(Integer id, String name, Double price, CategoryEnum category, Double quantity_required, UnitType unit) {
+    public Ingredient(Integer id, String name, Double price, CategoryEnum category, Double quantityRequired, UnitType unit) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.category = category;
-        this.quantity_required = quantity_required;
+        this.quantityRequired = quantityRequired;
         this.unit = unit;
     }
 
@@ -42,8 +44,8 @@ public class Ingredient {
         return category;
     }
 
-    public Double getQuantity_required() {
-        return quantity_required;
+    public Double getQuantityRequired() {
+        return quantityRequired;
     }
 
     public UnitType getUnit() {
@@ -54,12 +56,12 @@ public class Ingredient {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Ingredient that = (Ingredient) o;
-        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(price, that.price) && category == that.category && Objects.equals(quantity_required, that.quantity_required) && unit == that.unit;
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, price, category, quantity_required, unit);
+        return Objects.hash(id, name);
     }
 
     @Override
@@ -68,9 +70,9 @@ public class Ingredient {
                "id=" + id +
                ", name='" + name + '\'' +
                ", price=" + price +
-               ", quantity_required=" + quantity_required +
-               ", unit=" + unit +
                ", category=" + category +
+               ", quantityRequired=" + quantityRequired +
+               ", unit=" + unit +
                '}';
     }
 }
