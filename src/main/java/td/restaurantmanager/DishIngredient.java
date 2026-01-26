@@ -6,15 +6,66 @@ public class DishIngredient {
     private final Integer id;
     private final Dish dish;
     private final Ingredient ingredient;
-    private final Double quatity_required;
+    private final Double quantityRequired;
     private final UnitType unit;
 
-    public DishIngredient(Integer id, Dish dish, Ingredient ingredient, Double quatity_required, UnitType unit) {
+    public DishIngredient(Dish dish, Ingredient ingredient, Double quantityRequired, UnitType unit) {
+        this.id = null;
+        this.dish = dish;
+        this.quantityRequired = quantityRequired;
+        this.unit = unit;
+        this.ingredient = createIngredient(ingredient, quantityRequired, unit);
+    }
+
+    public DishIngredient(Integer id, Dish dish, Ingredient ingredient, Double quantityRequired, UnitType unit) {
         this.id = id;
         this.dish = dish;
         this.ingredient = ingredient;
-        this.quatity_required = quatity_required;
+        this.quantityRequired = quantityRequired;
         this.unit = unit;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public Dish getDish() {
+        return dish;
+    }
+
+    public Ingredient getIngredient() {
+        return ingredient;
+    }
+
+    public Double getQuantityRequired() {
+        return quantityRequired;
+    }
+
+    public UnitType getUnit() {
+        return unit;
+    }
+
+    private Ingredient createIngredient(Ingredient ingredient, Double quantityRequired, UnitType unit) {
+        return new Ingredient(
+                ingredient.getId(),
+                ingredient.getName(),
+                ingredient.getPrice(),
+                ingredient.getCategory(),
+                quantityRequired,
+                unit
+        );
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        DishIngredient that = (DishIngredient) o;
+        return Objects.equals(dish, that.dish) && Objects.equals(ingredient, that.ingredient);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(dish, ingredient);
     }
 
     @Override
@@ -23,7 +74,7 @@ public class DishIngredient {
                "id=" + id +
                ", dish=" + dish +
                ", ingredient=" + ingredient +
-               ", quatity_required=" + quatity_required +
+               ", quantityRequired=" + quantityRequired +
                ", unit=" + unit +
                '}';
     }
