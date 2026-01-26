@@ -28,9 +28,9 @@ create table dish_ingredient
     id_dish           int references dish(id),
     id_ingredient     int references ingredient(id),
     quantity_required numeric(10, 2),
-    unit              unit_type
+    unit              unit_type,
+    CONSTRAINT unique_dish_ingredient UNIQUE (id_dish, id_ingredient)
 );
-
 
 create type movement_type as enum ('IN', 'OUT');
 
@@ -43,3 +43,5 @@ create table stockmovement
     unit              unit_type,
     creation_datetime timestamp     default current_timestamp
 );
+
+ALTER TABLE dish_ingredient ADD CONSTRAINT unique_dish_ingredient UNIQUE (id_dish, id_ingredient);
