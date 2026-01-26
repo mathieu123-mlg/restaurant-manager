@@ -1,6 +1,5 @@
 package td.restaurantmanager;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -11,38 +10,12 @@ public class Dish {
     private final Double sellingPrice;
     private final List<DishIngredient> dishIngredients;
 
-    public Dish(Integer id, String name, DishTypeEnum dishType, Double sellingPrice) {
-        this.id = id;
-        this.name = name;
-        this.dishType = dishType;
-        this.sellingPrice = sellingPrice;
-        this.dishIngredients = null;
-    }
-
     public Dish(Integer id, String name, DishTypeEnum dishType, Double sellingPrice, List<DishIngredient> dishIngredients) {
         this.id = id;
         this.name = name;
         this.dishType = dishType;
         this.sellingPrice = sellingPrice;
         this.dishIngredients = dishIngredients;
-    }
-
-    public Dish(List<Ingredient> ingredients, Integer id, String name, DishTypeEnum dishType, Double sellingPrice) {
-        this.id = id;
-        this.name = name;
-        this.dishType = dishType;
-        this.sellingPrice = sellingPrice;
-        this.dishIngredients = new ArrayList<>();
-
-        for (Ingredient ingredient : ingredients) {
-            DishIngredient d_i = new DishIngredient(
-                    this,
-                    ingredient,
-                    ingredient.getQuantityRequired(),
-                    ingredient.getUnit()
-            );
-            dishIngredients.add(d_i);
-        }
     }
 
     public Integer getId() {
@@ -61,24 +34,8 @@ public class Dish {
         return sellingPrice;
     }
 
-    public List<Ingredient> getDishIngredients() {
-        if (dishIngredients == null) {
-            return List.of();
-        }
-
-        return dishIngredients.stream()
-                .map(d_i -> {
-                    Ingredient i = d_i.getIngredient();
-                    return new Ingredient(
-                            i.getId(),
-                            i.getName(),
-                            i.getPrice(),
-                            i.getCategory(),
-                            d_i.getQuantityRequired(),
-                            d_i.getUnit()
-                    );
-                })
-                .toList();
+    public List<DishIngredient> getDishIngredients() {
+        return dishIngredients;
     }
 
     public Double getDishCost() throws Exception {
@@ -87,7 +44,7 @@ public class Dish {
         }
 
         return getDishIngredients().stream()
-                .mapToDouble(i -> i.getPrice() * i.getQuantityRequired())
+                .mapToDouble(d_i -> d_i.getIngredient().getPrice() * d_i.getQuantityRequired())
                 .sum();
     }
 
@@ -117,7 +74,7 @@ public class Dish {
                ", name='" + name + '\'' +
                ", dishType=" + dishType +
                ", sellingPrice=" + sellingPrice +
-               ", ingredients=" + getDishIngredients() +
+               ", ingredients=" + getDishIngredients().stream().map(DishIngredient::getIngredient).toList() +
                '}';
     }
 }
