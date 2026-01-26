@@ -1,6 +1,7 @@
 package td.restaurantmanager;
 
 import java.sql.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -92,64 +93,6 @@ public class DataRetriever {
             dbConnection.closeDBConnection(conn);
         }
     }
-
-//    public Dish saveDish(Dish dishToSave) {
-//        if (dishToSave == null) {
-//            throw new IllegalArgumentException("Dish cannot be null");
-//        }
-//        String upsertDishSql = """
-//                INSERT INTO dish (id, selling_price, name, dish_type)
-//                VALUES (?, ?, ?, ?::dish_type)
-//                ON CONFLICT (id) DO UPDATE
-//                SET name = EXCLUDED.name,
-//                    selling_price = EXCLUDED.selling_price,
-//                    dish_type = EXCLUDED.dish_type
-//                RETURNING id""";
-//
-//        Connection conn = dbConnection.getDBConnection();
-//        try {
-//            conn.setAutoCommit(false);
-//            Integer dishId;
-//
-//            try (PreparedStatement ps = conn.prepareStatement(upsertDishSql)) {
-//                if (dishToSave.getId() != null) {
-//                    ps.setInt(1, dishToSave.getId());
-//                } else {
-//                    ps.setInt(1, next_id("dish"));
-//                }
-//                if (dishToSave.getSellingPrice() != null) {
-//                    ps.setDouble(2, dishToSave.getSellingPrice());
-//                } else {
-//                    ps.setNull(2, Types.DOUBLE);
-//                }
-//
-//                ps.setString(3, dishToSave.getName());
-//                ps.setString(4, dishToSave.getDishType().name());
-//
-//                try (ResultSet rs = ps.executeQuery()) {
-//                    rs.next();
-//                    dishId = rs.getInt(1);
-//                }
-//            }
-//
-//            List<DishIngredient> newDishIngredients = dishToSave.getDishIngredients();
-//
-//            detachIngredients(conn, dishId, newDishIngredients);
-//            attachIngredients(conn, dishId, newDishIngredients);
-//
-//            conn.commit();
-//            return findDishById(dishId);
-//        } catch (SQLException e) {
-//            try {
-//                conn.rollback();
-//            } catch (SQLException ex) {
-//                e.addSuppressed(ex);
-//            }
-//            throw new RuntimeException(e);
-//        } finally {
-//            dbConnection.closeDBConnection(conn);
-//        }
-//    }
 
     public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
         if (newIngredients == null || newIngredients.isEmpty()) {
@@ -243,7 +186,7 @@ public class DataRetriever {
             } catch (SQLException ex) {
                 e.addSuppressed(ex);
             }
-            throw new RuntimeException("Erreur lors de la sauvegarde du plat", e);
+            throw new RuntimeException(e);
         } finally {
             dbConnection.closeDBConnection(conn);
         }
@@ -287,65 +230,6 @@ public class DataRetriever {
         }
     }
 
-    //    public Ingredient saveIngredient(Ingredient ingredientTosave) {
-//        Connection conn = dbConnection.getDBConnection()
-//        try {
-//            PreparedStatement ps = conn.prepareStatement("""
-//                    INSERT INTO ingredient (id, name, price, category)
-//                    VALUES (?, ?, ?, ?)
-//                    ON conflict do nothing""");
-//
-//            ps.setInt(1, ingredientTosave.getId());
-//            ps.setString(2, ingredientTosave.getName());
-//            ps.setDouble(3, ingredientTosave.getPrice());
-//            ps.setString(4, ingredientTosave.getCategory().toString());
-//            ResultSet rs = ps.executeQuery();
-//
-//            Ingredient ingredient = getIngredients(rs).get(0);
-//            insertIntoStockMovement(ingredient);
-//            return ingredient;
-//        } catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        } finally {
-//            dbConnection.closeDBConnection(conn);
-//        }
-//    }
-//
-//    private StockMovement insertIntoStockMovement(Ingredient ingredient) {
-//        Connection conn = dbConnection.getDBConnection();
-//        try {
-//            PreparedStatement ps = conn.prepareStatement("""
-//                    insert into stockmovement (id, id_ingredient, quantity, unit, creation_datetime)
-//                    values (?, ?, ?::movement_type, ?::unit_type, ?)
-//                    on conflict (id) do update
-//                    set id_ingredient = excluded.id_ingredient,
-//                        quantity = excluded.quantity,
-//                        unit = excluded.unit,
-//                        creation_datetime = excluded.creation_datetime
-//                    returning id, id_ingredient, quantity, unit, creation_datetime;""");
-//
-//            ResultSet rs = ps.executeQuery();
-//            if (rs.next()) {
-//                return new StockMovement(
-//                        rs.getInt("id"),
-//                        ingredient,
-//                        UnitType.valueOf(rs.getString("type")),
-//                        rs.getObject("quantity") == null ? null : rs.getDouble("quantity"),
-//                        Instant.parse(rs.getString("creation_datetime"))
-//                );
-//            }
-//        } catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        } finally {
-//            dbConnection.closeDBConnection(conn);
-//        }
-//    }
-//
-//    public StockValue getStockValueAt(Instant instant) {
-//        return null;
-//    }
-//
-
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
         if (page <= 0 || size <= 0) {
             throw new IllegalArgumentException("page or size equal zero");
@@ -375,6 +259,186 @@ public class DataRetriever {
             dbConnection.closeDBConnection(conn);
         }
     }
+
+    public Ingredient saveIngredient(Ingredient ingredientToSave) {
+        if (ingredientToSave == null) {
+            throw new IllegalArgumentException("ingredientToSave is null");
+        }
+
+        String sql = """
+                insert into ingredient (id, name, price, category)
+                values (?, ? ,?, ?::ingredient_category)
+                on conflict (id) do update
+                set name = EXCLUDED.name,
+                    price = EXCLUDED.price,
+                    category = EXCLUDED.category
+                returning id;""";
+        Connection conn = dbConnection.getDBConnection();
+
+        try {
+            conn.setAutoCommit(false);
+            Integer ingredientId;
+
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, ingredientToSave.getId());
+                ps.setString(2, ingredientToSave.getName());
+                if (ingredientToSave.getPrice() == null) {
+                    ps.setNull(3, Types.DOUBLE);
+                } else {
+                    ps.setDouble(3, ingredientToSave.getPrice());
+                }
+                if (ingredientToSave.getCategory() == null) {
+                    ps.setNull(4, Types.VARCHAR);
+                } else {
+                    ps.setString(4, ingredientToSave.getCategory().name());
+                }
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    rs.next();
+                    ingredientId = rs.getInt(1);
+                }
+
+                List<StockMovement> stockMovementList = ingredientToSave.getStockMovementList();
+
+                if (stockMovementList != null && !stockMovementList.isEmpty()) {
+                    saveStockMovements(conn, ingredientId, ingredientToSave.getStockMovementList());
+                }
+
+                conn.commit();
+                return new Ingredient(
+                        ingredientId,
+                        ingredientToSave.getName(),
+                        ingredientToSave.getPrice(),
+                        ingredientToSave.getCategory(),
+                        getIngredientStockMovements(ingredientId)
+                );
+            } catch (SQLException e) {
+                conn.rollback();
+                throw new RuntimeException(e);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection(conn);
+        }
+    }
+
+//    public Dish saveDish(Dish dishToSave) {
+//        if (dishToSave == null) {
+//            throw new IllegalArgumentException("Dish cannot be null");
+//        }
+//        String upsertDishSql = """
+//                INSERT INTO dish (id, selling_price, name, dish_type)
+//                VALUES (?, ?, ?, ?::dish_type)
+//                ON CONFLICT (id) DO UPDATE
+//                SET name = EXCLUDED.name,
+//                    selling_price = EXCLUDED.selling_price,
+//                    dish_type = EXCLUDED.dish_type
+//                RETURNING id""";
+//
+//        Connection conn = dbConnection.getDBConnection();
+//        try {
+//            conn.setAutoCommit(false);
+//            Integer dishId;
+//
+//            try (PreparedStatement ps = conn.prepareStatement(upsertDishSql)) {
+//                if (dishToSave.getId() != null) {
+//                    ps.setInt(1, dishToSave.getId());
+//                } else {
+//                    ps.setInt(1, next_id("dish"));
+//                }
+//                if (dishToSave.getSellingPrice() != null) {
+//                    ps.setDouble(2, dishToSave.getSellingPrice());
+//                } else {
+//                    ps.setNull(2, Types.DOUBLE);
+//                }
+//
+//                ps.setString(3, dishToSave.getName());
+//                ps.setString(4, dishToSave.getDishType().name());
+//
+//                try (ResultSet rs = ps.executeQuery()) {
+//                    rs.next();
+//                    dishId = rs.getInt(1);
+//                }
+//            }
+//
+//            List<DishIngredient> newDishIngredients = dishToSave.getDishIngredients();
+//
+//            detachIngredients(conn, dishId, newDishIngredients);
+//            attachIngredients(conn, dishId, newDishIngredients);
+//
+//            conn.commit();
+//            return findDishById(dishId);
+//        } catch (SQLException e) {
+//            try {
+//                conn.rollback();
+//            } catch (SQLException ex) {
+//                e.addSuppressed(ex);
+//            }
+//            throw new RuntimeException(e);
+//        } finally {
+//            dbConnection.closeDBConnection(conn);
+//        }
+//    }
+
+    //    public Ingredient saveIngredient(Ingredient ingredientTosave) {
+//        Connection conn = dbConnection.getDBConnection()
+//        try {
+//            PreparedStatement ps = conn.prepareStatement("""
+//                    INSERT INTO ingredient (id, name, price, category)
+//                    VALUES (?, ?, ?, ?)
+//                    ON conflict do nothing""");
+//
+//            ps.setInt(1, ingredientTosave.getId());
+//            ps.setString(2, ingredientTosave.getName());
+//            ps.setDouble(3, ingredientTosave.getPrice());
+//            ps.setString(4, ingredientTosave.getCategory().toString());
+//            ResultSet rs = ps.executeQuery();
+//
+//            Ingredient ingredient = getIngredients(rs).get(0);
+//            insertIntoStockMovement(ingredient);
+//            return ingredient;
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        } finally {
+//            dbConnection.closeDBConnection(conn);
+//        }
+//    }
+//
+//    private StockMovement insertIntoStockMovement(Ingredient ingredient) {
+//        Connection conn = dbConnection.getDBConnection();
+//        try {
+//            PreparedStatement ps = conn.prepareStatement("""
+//                    insert into stock_movement (id, id_ingredient, quantity, unit, creation_datetime)
+//                    values (?, ?, ?::movement_type, ?::unit_type, ?)
+//                    on conflict (id) do update
+//                    set id_ingredient = excluded.id_ingredient,
+//                        quantity = excluded.quantity,
+//                        unit = excluded.unit,
+//                        creation_datetime = excluded.creation_datetime
+//                    returning id, id_ingredient, quantity, unit, creation_datetime;""");
+//
+//            ResultSet rs = ps.executeQuery();
+//            if (rs.next()) {
+//                return new StockMovement(
+//                        rs.getInt("id"),
+//                        ingredient,
+//                        UnitType.valueOf(rs.getString("type")),
+//                        rs.getObject("quantity") == null ? null : rs.getDouble("quantity"),
+//                        Instant.parse(rs.getString("creation_datetime"))
+//                );
+//            }
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        } finally {
+//            dbConnection.closeDBConnection(conn);
+//        }
+//    }
+//
+//    public StockValue getStockValueAt(Instant instant) {
+//        return null;
+//    }
+//
 
     private Ingredient getIngredientFromDB(ResultSet rs) throws SQLException {
         return new Ingredient(
@@ -759,6 +823,89 @@ public class DataRetriever {
                 ps.addBatch();
             }
             ps.executeBatch();
+        }
+    }
+
+    private void saveStockMovements(Connection conn, Integer ingredientId, List<StockMovement> stockMovements)
+            throws SQLException {
+
+        if (stockMovements == null || stockMovements.isEmpty()) {
+            return;
+        }
+
+        String insertMovementSql = """
+                INSERT INTO stock_movement (id, id_ingredient, quantity, type, unit, creation_datetime)
+                VALUES (?, ?, ?, ?::movement_type, ?::unit_type, ?)
+                ON CONFLICT (id) DO nothing""";
+
+        try (PreparedStatement ps = conn.prepareStatement(insertMovementSql)) {
+            for (StockMovement movement : stockMovements) {
+                if (movement.getId() == null) {
+                    ps.setInt(1, next_id("stock_movement"));
+                } else {
+                    ps.setInt(1, movement.getId());
+                }
+
+                ps.setInt(2, ingredientId);
+
+                if (movement.getValue() != null && movement.getValue().getQuantity() != null) {
+                    ps.setDouble(3, movement.getValue().getQuantity());
+                } else {
+                    ps.setNull(3, Types.DOUBLE);
+                }
+
+                ps.setString(4, movement.getType().name());
+
+                if (movement.getValue() != null) {
+                    ps.setString(5, movement.getValue().getUnit().name());
+                } else {
+                    ps.setString(5, UnitType.KG.name());
+                }
+
+                Timestamp timestamp = movement.getCreationDatetime() != null
+                        ? Timestamp.from(movement.getCreationDatetime())
+                        : Timestamp.from(Instant.now());
+                ps.setTimestamp(6, timestamp);
+                ps.executeUpdate();
+            }
+        }
+    }
+
+    public List<StockMovement> getIngredientStockMovements(Integer ingredientId) {
+        if (ingredientId == null) {
+            throw new IllegalArgumentException("ingredientId cannot be null");
+        }
+
+        String sql = """
+                SELECT id, quantity, type, unit, creation_datetime
+                FROM stock_movement
+                WHERE id_ingredient = ?
+                ORDER BY creation_datetime""";
+
+        Connection conn = dbConnection.getDBConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ingredientId);
+
+            List<StockMovement> movements = new ArrayList<>();
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    StockMovement movement = new StockMovement(
+                            rs.getInt("id"),
+                            new StockValue(
+                                    rs.getDouble("quantity"),
+                                    UnitType.valueOf(rs.getString("unit"))
+                            ),
+                            MouvementTypeEnum.valueOf(rs.getString("type")),
+                            rs.getTimestamp("creation_datetime").toInstant()
+                    );
+                    movements.add(movement);
+                }
+            }
+            return movements;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection(conn);
         }
     }
 }
