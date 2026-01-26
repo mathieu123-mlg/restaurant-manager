@@ -186,73 +186,77 @@ public class DataRetriever {
             dbConnection.closeDBConnection(conn);
         }
     }
-//
-//    public List<Dish> findDishByIngredientsName(String ingredientsName) {
-//        if (ingredientsName == null || ingredientsName.trim().isEmpty()) {
-//            throw new IllegalArgumentException("ingredientsName is null or empty");
-//        }
-//        String sql =
-//                """
-//                        select di.id_dish, dish.name, dish.dish_type, dish.selling_price
-//                        from dish
-//                        left join dish_ingredient di on di.id_dish = dish.id
-//                        left join ingredient i on di.id_ingredient = i.id
-//                        where i.name ilike ?
-//                        order by dish.id;""";
-//
-//        Connection conn = dbConnection.getDBConnection();
-//        try {
-//            PreparedStatement ps = conn.prepareStatement(sql);
-//            ps.setString(1, "%" + ingredientsName + "%");
-//            ResultSet rs = ps.executeQuery();
-//
-//            List<Dish> dishFromDatabase = new ArrayList<>();
-//            while (rs.next()) {
-//                Integer dishId = rs.getInt("id_dish");
-//                Dish dish = new Dish(
-//                        dishId,
-//                        rs.getString("name"),
-//                        DishTypeEnum.valueOf(rs.getString("dish_type")),
-//                        rs.getObject("selling_price") == null ? null : rs.getDouble("selling_price"),
-//                        findDishById(dishId).getDishIngredients()
-//                );
-//
-//                dishFromDatabase.add(dish);
-//            }
-//
-//            return dishFromDatabase;
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        } finally {
-//            dbConnection.closeDBConnection(conn);
-//        }
-//    }
-//
-//    public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
-//        if (page <= 0 || size <= 0) {
-//            throw new IllegalArgumentException("page or size equal zero");
-//        }
-//        StringBuilder sql = new StringBuilder("""
-//                select di.id_ingredient, i.name, i.price, i.category,
-//                    di.id_dish, di.quantity_required, di.unit
-//                from ingredient i
-//                left join dish_ingredient di on i.id = di.id_ingredient
-//                left join dish d on d.id = di.id_dish
-//                where 1 = 1""");
-//
-//        Connection conn = dbConnection.getDBConnection();
-//        try {
-//            PreparedStatement ps = buildIngredientsSearchStatement(sql, ingredientName, category, dishName, conn, page, size);
-//            ps.executeQuery();
-//            ResultSet rs = ps.getResultSet();
-//
-//            return getIngredients(rs);
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        } finally {
-//            dbConnection.closeDBConnection(conn);
-//        }
-//    }
+
+    public List<Dish> findDishByIngredientsName(String ingredientsName) {
+        if (ingredientsName == null || ingredientsName.trim().isEmpty()) {
+            throw new IllegalArgumentException("ingredientsName is null or empty");
+        }
+        String sql =
+                """
+                        select di.id_dish, dish.name, dish.dish_type, dish.selling_price
+                        from dish
+                        left join dish_ingredient di on di.id_dish = dish.id
+                        left join ingredient i on di.id_ingredient = i.id
+                        where i.name ilike ?
+                        order by dish.id;""";
+
+        Connection conn = dbConnection.getDBConnection();
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, "%" + ingredientsName + "%");
+            ResultSet rs = ps.executeQuery();
+
+            List<Dish> dishFromDatabase = new ArrayList<>();
+            while (rs.next()) {
+                Integer dishId = rs.getInt("id_dish");
+                Dish dish = new Dish(
+                        findDishById(dishId).getDishIngredients(),
+                        dishId,
+                        rs.getString("name"),
+                        DishTypeEnum.valueOf(rs.getString("dish_type")),
+                        getNullableDouble(rs, "selling_price")
+                );
+
+                dishFromDatabase.add(dish);
+            }
+
+            return dishFromDatabase;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection(conn);
+        }
+    }
+
+    public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
+        if (page <= 0 || size <= 0) {
+            throw new IllegalArgumentException("page or size equal zero");
+        }
+        StringBuilder sql = new StringBuilder("""
+                select i.id as id_ingredient, i.name as ingredient_name, i.price, i.category,
+                    di.id_dish, di.quantity_required, di.unit
+                from ingredient i
+                left join dish_ingredient di on i.id = di.id_ingredient
+                left join dish d on d.id = di.id_dish
+                where 1 = 1""");
+
+        Connection conn = dbConnection.getDBConnection();
+        try {
+            PreparedStatement ps = buildIngredientsSearchStatement(sql, ingredientName, category, dishName, conn, page, size);
+            ResultSet rs = ps.executeQuery();
+
+            List<Ingredient> ingredientsByCriteria = new ArrayList<>();
+            while (rs.next()) {
+                ingredientsByCriteria.add(getIngredientFromDB(rs));
+            }
+
+            return ingredientsByCriteria;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            dbConnection.closeDBConnection(conn);
+        }
+    }
 //
 //    public Ingredient saveIngredient(Ingredient ingredientTosave) {
 //        Connection conn = dbConnection.getDBConnection()
@@ -325,47 +329,46 @@ public class DataRetriever {
                         : UnitType.valueOf(rs.getString("unit")));
     }
 
-    //
-//    private PreparedStatement buildIngredientsSearchStatement(
-//            StringBuilder sql,
-//            String ingredientName,
-//            CategoryEnum category,
-//            String dishName,
-//            Connection conn,
-//            int page,
-//            int size) throws SQLException {
-//
-//        List<Object> params = new ArrayList<>();
-//
-//        if (ingredientName != null) {
-//            sql.append(" AND i.name ILIKE ?");
-//            params.add("%" + ingredientName.trim() + "%");
-//        }
-//
-//        if (category != null) {
-//            sql.append(" AND i.category::varchar(20) ILIKE ?");
-//            params.add("%" + category.name() + "%");
-//        }
-//
-//        if (dishName != null) {
-//            sql.append(" AND d.name ILIKE ?");
-//            params.add("%" + dishName.trim() + "%");
-//        }
-//
-//        sql.append(" ORDER BY i.id LIMIT ? OFFSET ?");
-//        PreparedStatement ps = conn.prepareStatement(sql.toString());
-//
-//        int index = 1;
-//        for (Object param : params) {
-//            ps.setObject(index++, param);
-//        }
-//
-//        ps.setInt(index++, size);
-//        ps.setInt(index, (page - 1) * size);
-//
-//        return ps;
-//    }
-//
+    private PreparedStatement buildIngredientsSearchStatement(
+            StringBuilder sql,
+            String ingredientName,
+            CategoryEnum category,
+            String dishName,
+            Connection conn,
+            int page,
+            int size) throws SQLException {
+
+        List<Object> params = new ArrayList<>();
+
+        if (ingredientName != null) {
+            sql.append(" AND i.name ILIKE ?");
+            params.add("%" + ingredientName.trim() + "%");
+        }
+
+        if (category != null) {
+            sql.append(" AND i.category::varchar(20) ILIKE ?");
+            params.add("%" + category.name() + "%");
+        }
+
+        if (dishName != null) {
+            sql.append(" AND d.name ILIKE ?");
+            params.add("%" + dishName.trim() + "%");
+        }
+
+        sql.append(" ORDER BY i.id LIMIT ? OFFSET ?");
+        PreparedStatement ps = conn.prepareStatement(sql.toString());
+
+        int index = 1;
+        for (Object param : params) {
+            ps.setObject(index++, param);
+        }
+
+        ps.setInt(index++, size);
+        ps.setInt(index, (page - 1) * size);
+
+        return ps;
+    }
+
     private Integer next_id(String table) {
         Connection conn = dbConnection.getDBConnection();
         try {
