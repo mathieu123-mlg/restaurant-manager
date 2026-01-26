@@ -9,14 +9,6 @@ public class DishIngredient {
     private final Double quantityRequired;
     private final UnitType unit;
 
-    public DishIngredient(Dish dish, Ingredient ingredient, Double quantityRequired, UnitType unit) {
-        this.id = null;
-        this.dish = dish;
-        this.quantityRequired = quantityRequired;
-        this.unit = unit;
-        this.ingredient = createIngredient(ingredient, quantityRequired, unit);
-    }
-
     public DishIngredient(Integer id, Dish dish, Ingredient ingredient, Double quantityRequired, UnitType unit) {
         this.id = id;
         this.dish = dish;
@@ -43,17 +35,6 @@ public class DishIngredient {
 
     public UnitType getUnit() {
         return unit;
-    }
-
-    private Ingredient createIngredient(Ingredient ingredient, Double quantityRequired, UnitType unit) {
-        return new Ingredient(
-                ingredient.getId(),
-                ingredient.getName(),
-                ingredient.getPrice(),
-                ingredient.getCategory(),
-                quantityRequired,
-                unit
-        );
     }
 
     @Override
