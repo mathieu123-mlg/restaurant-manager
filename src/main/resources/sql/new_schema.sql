@@ -34,7 +34,7 @@ create table dish_ingredient
 
 create type movement_type as enum ('IN', 'OUT');
 
-create table stockmovement
+create table stock_movement
 (
     id                serial primary key,
     id_ingredient     int references ingredient (id),
