@@ -282,15 +282,15 @@ public class DataRetriever {
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, ingredientToSave.getId());
                 ps.setString(2, ingredientToSave.getName());
-                if (ingredientToSave.getPrice() == null) {
-                    ps.setNull(3, Types.DOUBLE);
-                } else {
+                if (ingredientToSave.getPrice() != null) {
                     ps.setDouble(3, ingredientToSave.getPrice());
-                }
-                if (ingredientToSave.getCategory() == null) {
-                    ps.setNull(4, Types.VARCHAR);
                 } else {
+                    ps.setNull(3, Types.DOUBLE);
+                }
+                if (ingredientToSave.getCategory() != null) {
                     ps.setString(4, ingredientToSave.getCategory().name());
+                } else {
+                    ps.setNull(4, Types.VARCHAR);
                 }
 
                 try (ResultSet rs = ps.executeQuery()) {
@@ -301,7 +301,7 @@ public class DataRetriever {
                 List<StockMovement> stockMovementList = ingredientToSave.getStockMovementList();
 
                 if (stockMovementList != null && !stockMovementList.isEmpty()) {
-                    saveStockMovements(conn, ingredientId, ingredientToSave.getStockMovementList());
+                    addStockMovements(conn, ingredientId, stockMovementList);
                 }
 
                 conn.commit();
@@ -445,7 +445,9 @@ public class DataRetriever {
                 rs.getInt("id_ingredient"),
                 rs.getString("ingredient_name"),
                 getNullableDouble(rs, "price"),
-                CategoryEnum.valueOf(rs.getString("category")));
+                CategoryEnum.valueOf(rs.getString("category")),
+                getIngredientStockMovements(rs.getInt("id_ingredient"))
+        );
     }
 
     private PreparedStatement buildIngredientsSearchStatement(
@@ -678,7 +680,7 @@ public class DataRetriever {
             ResultSet rs = stm.executeQuery("""
                     SELECT COALESCE(MAX(id), 0) + 1 FROM %s""".formatted(table));
 
-            return rs.next() ? (rs.getInt(1) + 1) : 1;
+            return rs.next() ? rs.getInt(1) : 1;
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -826,7 +828,7 @@ public class DataRetriever {
         }
     }
 
-    private void saveStockMovements(Connection conn, Integer ingredientId, List<StockMovement> stockMovements)
+    private void addStockMovements(Connection conn, Integer ingredientId, List<StockMovement> stockMovements)
             throws SQLException {
 
         if (stockMovements == null || stockMovements.isEmpty()) {
@@ -834,36 +836,35 @@ public class DataRetriever {
         }
 
         String insertMovementSql = """
-                INSERT INTO stock_movement (id, id_ingredient, quantity, type, unit, creation_datetime)
-                VALUES (?, ?, ?, ?::movement_type, ?::unit_type, ?)
+                INSERT INTO stock_movement (id, id_ingredient, quantity, unit, type, creation_datetime)
+                VALUES (?, ?, ?, ?::unit_type, ?::movement_type, ?)
                 ON CONFLICT (id) DO nothing""";
 
         try (PreparedStatement ps = conn.prepareStatement(insertMovementSql)) {
-            for (StockMovement movement : stockMovements) {
-                if (movement.getId() == null) {
+            for (StockMovement stock : stockMovements) {
+                if (stock.getId() == null) {
                     ps.setInt(1, next_id("stock_movement"));
                 } else {
-                    ps.setInt(1, movement.getId());
+                    ps.setInt(1, stock.getId());
                 }
 
                 ps.setInt(2, ingredientId);
 
-                if (movement.getValue() != null && movement.getValue().getQuantity() != null) {
-                    ps.setDouble(3, movement.getValue().getQuantity());
+                if (stock.getValue() != null && stock.getValue().getQuantity() != null) {
+                    ps.setDouble(3, stock.getValue().getQuantity());
                 } else {
                     ps.setNull(3, Types.DOUBLE);
                 }
-
-                ps.setString(4, movement.getType().name());
-
-                if (movement.getValue() != null) {
-                    ps.setString(5, movement.getValue().getUnit().name());
+                if (stock.getValue().getUnit() != null) {
+                    ps.setString(4, stock.getValue().getUnit().name());
                 } else {
-                    ps.setString(5, UnitType.KG.name());
+                    ps.setString(4, UnitType.KG.name());
                 }
 
-                Timestamp timestamp = movement.getCreationDatetime() != null
-                        ? Timestamp.from(movement.getCreationDatetime())
+                ps.setString(5, stock.getType().name());
+
+                Timestamp timestamp = stock.getCreationDatetime() != null
+                        ? Timestamp.from(stock.getCreationDatetime())
                         : Timestamp.from(Instant.now());
                 ps.setTimestamp(6, timestamp);
                 ps.executeUpdate();
@@ -883,25 +884,25 @@ public class DataRetriever {
                 ORDER BY creation_datetime""";
 
         Connection conn = dbConnection.getDBConnection();
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, ingredientId);
 
-            List<StockMovement> movements = new ArrayList<>();
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    StockMovement movement = new StockMovement(
-                            rs.getInt("id"),
-                            new StockValue(
-                                    rs.getDouble("quantity"),
-                                    UnitType.valueOf(rs.getString("unit"))
-                            ),
-                            MouvementTypeEnum.valueOf(rs.getString("type")),
-                            rs.getTimestamp("creation_datetime").toInstant()
-                    );
-                    movements.add(movement);
-                }
+            List<StockMovement> stock = new ArrayList<>();
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                StockMovement movement = new StockMovement(
+                        rs.getInt("id"),
+                        new StockValue(
+                                rs.getDouble("quantity"),
+                                UnitType.valueOf(rs.getString("unit"))
+                        ),
+                        MouvementTypeEnum.valueOf(rs.getString("type")),
+                        rs.getTimestamp("creation_datetime").toInstant()
+                );
+                stock.add(movement);
             }
-            return movements;
+            return stock;
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } finally {
