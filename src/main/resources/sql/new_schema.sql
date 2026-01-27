@@ -43,3 +43,18 @@ create table stock_movement
     unit              unit_type,
     creation_datetime timestamp     default current_timestamp
 );
+
+create table "order"
+(
+    id                serial primary key,
+    reference         varchar unique,
+    creation_datetime timestamp default current_timestamp
+);
+
+create table dish_order
+(
+    id       serial primary key,
+    id_order int references "order" (id),
+    id_dish  int references dish (id),
+    quantity numeric(10, 2) default 1
+)
