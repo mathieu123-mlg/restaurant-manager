@@ -8,9 +8,9 @@ public class Order {
     private final Integer id;
     private final String reference;
     private final Instant creationDatetime;
-    private final List<Order> dishOrders;
+    private final List<DishOrder> dishOrders;
 
-    public Order(Integer id, String reference, Instant creationDatetime, List<Order> dishOrders) {
+    public Order(Integer id, String reference, Instant creationDatetime, List<DishOrder> dishOrders) {
         this.id = id;
         this.reference = reference;
         this.creationDatetime = creationDatetime;
@@ -29,16 +29,32 @@ public class Order {
         return creationDatetime;
     }
 
-    public List<Order> getDishOrders() {
+    public List<DishOrder> getDishOrders() {
         return dishOrders;
     }
 
     public Double getTotalAmountWithoutVAt() {
-        return null;
+        return dishOrders.stream()
+                .mapToDouble(dishOrder -> {
+                    try {
+                        return dishOrder.getDish().getDishCost() * dishOrder.getQuantity();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .sum();
     }
 
     public Double getTotalAmountWithVAt() {
-        return null;
+        return dishOrders.stream()
+                .mapToDouble(dishOrder -> {
+                    try {
+                        return dishOrder.getDish().getGrossMargin() * dishOrder.getQuantity();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .sum();
     }
 
     @Override
