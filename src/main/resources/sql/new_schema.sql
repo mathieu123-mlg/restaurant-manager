@@ -2,7 +2,7 @@
 
 create type dish_type as enum ('STARTER', 'MAIN', 'DESSERT');
 
-create table dish
+create table if not exists dish
 (
     id            serial primary key,
     name          varchar   not null,
@@ -12,7 +12,7 @@ create table dish
 
 create type ingredient_category as enum ('VEGETABLE', 'ANIMAL', 'MARINE', 'DAIRY', 'OTHER');
 
-create table ingredient
+create table if not exists ingredient
 (
     id       serial primary key,
     name     varchar unique      not null,
@@ -22,7 +22,7 @@ create table ingredient
 
 create type unit_type as enum ('PCS', 'KG', 'L');
 
-create table dish_ingredient
+create table if not exists dish_ingredient
 (
     id                serial primary key,
     id_dish           int references dish (id),
@@ -34,7 +34,7 @@ create table dish_ingredient
 
 create type movement_type as enum ('IN', 'OUT');
 
-create table stock_movement
+create table if not exists stock_movement
 (
     id                serial primary key,
     id_ingredient     int references ingredient (id),
@@ -44,17 +44,17 @@ create table stock_movement
     creation_datetime timestamp     default current_timestamp
 );
 
-create table "order"
+create table if not exists "order"
 (
     id                serial primary key,
     reference         varchar unique,
     creation_datetime timestamp default current_timestamp
 );
 
-create table dish_order
+create table if not exists dish_order
 (
     id       serial primary key,
     id_order int references "order" (id),
     id_dish  int references dish (id),
-    quantity numeric(10, 2) default 1
+    quantity int default 1
 )
