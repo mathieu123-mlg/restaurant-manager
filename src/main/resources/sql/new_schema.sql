@@ -56,5 +56,9 @@ create table if not exists dish_order
     id       serial primary key,
     id_order int references "order" (id),
     id_dish  int references dish (id),
-    quantity int default 1
-)
+    quantity int default 1,
+    CONSTRAINT unique_dish_order UNIQUE (id_order, id_dish)
+);
+
+alter table dish_order
+    add constraint unique_dish_order unique (id_order, id_dish)
