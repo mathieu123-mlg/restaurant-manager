@@ -6,14 +6,21 @@ import java.util.Objects;
 public class StockMovement {
     private final Integer id;
     private final StockValue value;
-    private final MouvementTypeEnum type;
+    private final MovementTypeEnum type;
     private final Instant creationDatetime;
 
-    public StockMovement(Integer id, StockValue value, MouvementTypeEnum type, Instant creationDatetime) {
+    public StockMovement(Integer id, StockValue value, MovementTypeEnum type, Instant creationDatetime) {
         this.id = id;
-        this.value = value;
+        this.value = Objects.isNull(value) ? new StockValue(0.0) : value;
         this.type = type;
         this.creationDatetime = creationDatetime;
+    }
+
+    public StockMovement(Integer id, StockValue value, MovementTypeEnum type) {
+        this.id = id;
+        this.value = Objects.isNull(value) ? new StockValue(0.0) : value;
+        this.type = type;
+        this.creationDatetime = Instant.now();
     }
 
     public Integer getId() {
@@ -24,7 +31,7 @@ public class StockMovement {
         return value;
     }
 
-    public MouvementTypeEnum getType() {
+    public MovementTypeEnum getType() {
         return type;
     }
 

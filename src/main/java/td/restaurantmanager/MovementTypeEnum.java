@@ -1,5 +1,5 @@
 package td.restaurantmanager;
 
-public enum MouvementTypeEnum {
+public enum MovementTypeEnum {
     IN, OUT
 }

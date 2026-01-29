@@ -3,20 +3,24 @@ package td.restaurantmanager;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 
 public class Ingredient {
     private final Integer id;
     private final String name;
     private final Double price;
     private final CategoryEnum category;
-    private List<StockMovement> stockMovementList;
+    private final List<StockMovement> stockMovementList;
 
     public Ingredient(Integer id, String name, Double price, CategoryEnum category) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.category = category;
+        this.stockMovementList = new ArrayList<>();
     }
 
     public Ingredient(Integer id, String name, Double price, CategoryEnum category, List<StockMovement> stockMovementList) {
@@ -44,40 +48,38 @@ public class Ingredient {
     }
 
     public List<StockMovement> getStockMovementList() {
-        return stockMovementList == null ? new ArrayList<>() : stockMovementList;
+        return stockMovementList;
     }
 
     public StockValue getStockValueAt(Instant instant) {
-        if (instant == null || stockMovementList == null || stockMovementList.isEmpty()) {
+        if (stockMovementList == null || stockMovementList.isEmpty()) {
             return new StockValue(0.0, UnitType.KG);
         }
 
-        double total = 0.0;
-        UnitType unit = UnitType.KG;
+        Map<UnitType, List<StockMovement>> unitSet = stockMovementList.stream()
+                .collect(Collectors.groupingBy(stockMovement -> stockMovement.getValue().getUnit()));
 
-        for (StockMovement movement : stockMovementList) {
-            if (movement.getCreationDatetime().isBefore(instant) ||
-                movement.getCreationDatetime().equals(instant)) {
-
-                if (movement.getValue() != null) {
-                    double quantity = movement.getValue().getQuantity() != null
-                            ? movement.getValue().getQuantity()
-                            : 0.0;
-
-                    if (movement.getType() == MouvementTypeEnum.IN) {
-                        total += quantity;
-                    } else if (movement.getType() == MouvementTypeEnum.OUT) {
-                        total -= quantity;
-                    }
-
-                    if (movement.getValue().getUnit() != null) {
-                        unit = movement.getValue().getUnit();
-                    }
-                }
-            }
+        if (unitSet.keySet().size() > 1) {
+            throw new RuntimeException("Multiple unit found and not handle for conversion");
         }
 
-        return new StockValue(total, unit);
+        UnitType unit = unitSet.keySet().stream().findFirst().orElse(UnitType.KG);
+
+        List<StockMovement> stockMovements = stockMovementList.stream()
+                .filter(stockMovement -> !stockMovement.getCreationDatetime().isAfter(instant))
+                .toList();
+
+        double movementIn = stockMovements.stream()
+                .filter(stockMovement -> stockMovement.getType().equals(MovementTypeEnum.IN))
+                .flatMapToDouble(stockMovement -> DoubleStream.of(stockMovement.getValue().getQuantity()))
+                .sum();
+
+        double movementOut = stockMovements.stream()
+                .filter(stockMovement -> stockMovement.getType().equals(MovementTypeEnum.OUT))
+                .flatMapToDouble(stockMovement -> DoubleStream.of(stockMovement.getValue().getQuantity()))
+                .sum();
+
+        return new StockValue((movementIn - movementOut), unit);
     }
 
     @Override
@@ -99,7 +101,7 @@ public class Ingredient {
                ", name='" + name + '\'' +
                ", price=" + price +
                ", category=" + category +
-               ", stockMovementList=" + stockMovementList +
+               ", actualStock=" + getStockValueAt(Instant.now()) +
                '}';
     }
 }

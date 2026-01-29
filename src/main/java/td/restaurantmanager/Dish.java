@@ -1,5 +1,6 @@
 package td.restaurantmanager;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -8,7 +9,7 @@ public class Dish {
     private final String name;
     private final DishTypeEnum dishType;
     private final Double sellingPrice;
-    private final List<DishIngredient> dishIngredients;
+    private List<DishIngredient> dishIngredients;
 
     public Dish(Integer id, String name, DishTypeEnum dishType, Double sellingPrice, List<DishIngredient> dishIngredients) {
         this.id = id;
@@ -35,7 +36,24 @@ public class Dish {
     }
 
     public List<DishIngredient> getDishIngredients() {
-        return dishIngredients;
+        return dishIngredients == null ? new ArrayList<>() : dishIngredients;
+    }
+
+    public void setDishIngredients(List<DishIngredient> dishIngredients) {
+        if (dishIngredients == null) {
+            this.dishIngredients = new ArrayList<>();
+        } else {
+            // Valider que tous les DishIngredient ont ce Dish comme référence
+            for (DishIngredient di : dishIngredients) {
+                if (di != null && di.getDish() != this && di.getDish() != null) {
+                    throw new IllegalArgumentException(
+                            "DishIngredient references a different dish. Expected: " +
+                            this.id + ", Found: " + di.getDish().getId()
+                    );
+                }
+            }
+            this.dishIngredients = new ArrayList<>(dishIngredients);
+        }
     }
 
     public Double getDishCost() throws Exception {

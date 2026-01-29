@@ -14,7 +14,7 @@ public class TableOrder {
         this.departureDatetime = departureDatetime;
     }
 
-    public Table getTalbe() {
+    public Table getTable() {
         return table;
     }
 

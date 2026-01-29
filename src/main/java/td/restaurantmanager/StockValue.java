@@ -11,6 +11,11 @@ public class StockValue {
         this.unit = unit;
     }
 
+    public StockValue(Double quantity) {
+        this.quantity = quantity;
+        this.unit = UnitType.KG;
+    }
+
     public Double getQuantity() {
         return quantity;
     }

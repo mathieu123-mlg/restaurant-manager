@@ -9,12 +9,17 @@ public class Order {
     private final String reference;
     private final Instant creationDatetime;
     private final List<DishOrder> dishOrders;
+    private final TableOrder table;
 
-    public Order(Integer id, String reference, Instant creationDatetime, List<DishOrder> dishOrders) {
+    public Order(Integer id, String reference, Instant creationDatetime, List<DishOrder> dishOrders, TableOrder table) {
         this.id = id;
         this.reference = reference;
         this.creationDatetime = creationDatetime;
         this.dishOrders = dishOrders;
+        if (table == null) {
+            throw new RuntimeException("La table fourni n'est pas disponible");
+        }
+        this.table = table;
     }
 
     public Integer getId() {
@@ -31,6 +36,10 @@ public class Order {
 
     public List<DishOrder> getDishOrders() {
         return dishOrders;
+    }
+
+    public TableOrder getTable() {
+        return table;
     }
 
     public Double getTotalAmountWithoutVAt() {
