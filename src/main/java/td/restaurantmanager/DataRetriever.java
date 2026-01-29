@@ -319,7 +319,8 @@ public class DataRetriever {
             ps.setInt(1, tableId);
             ps.setTimestamp(2, Timestamp.from(arrival));
             ps.setTimestamp(3, Timestamp.from(departure));
-            ps.executeQuery();
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
         }
     }
 
