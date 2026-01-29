@@ -62,6 +62,15 @@ create table if not exists dish_order
 
 create table if not exists "table"
 (
-    id serial primary key,
-    number int not null
-)
+    id     serial primary key,
+    number int unique not null
+);
+
+create table if not exists table_order
+(
+    id_table               int references "table" (id) not null,
+    id_order               int references "order" (id) not null,
+    arrival_datetime timestamp without time zone not null,
+    departure_datetime       timestamp without time zone,
+    constraint unique_table_order unique (id_order, id_table)
+);
