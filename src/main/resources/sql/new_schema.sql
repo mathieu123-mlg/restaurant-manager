@@ -60,5 +60,8 @@ create table if not exists dish_order
     CONSTRAINT unique_dish_order UNIQUE (id_order, id_dish)
 );
 
-alter table dish_order
-    add constraint unique_dish_order unique (id_order, id_dish)
+create table if not exists "table"
+(
+    id serial primary key,
+    number int not null
+)
