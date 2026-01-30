@@ -43,7 +43,6 @@ public class Dish {
         if (dishIngredients == null) {
             this.dishIngredients = new ArrayList<>();
         } else {
-            // Valider que tous les DishIngredient ont ce Dish comme référence
             for (DishIngredient di : dishIngredients) {
                 if (di != null && di.getDish() != this && di.getDish() != null) {
                     throw new IllegalArgumentException(
