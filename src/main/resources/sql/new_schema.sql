@@ -5,10 +5,12 @@ create type dish_type as enum ('STARTER', 'MAIN', 'DESSERT');
 create table if not exists dish
 (
     id            serial primary key,
-    name          varchar   not null,
-    dish_type     dish_type not null default 'STARTER',
+    name          varchar unique not null,
+    dish_type     dish_type      not null default 'STARTER',
     selling_price numeric(10, 2)
 );
+
+alter table dish add constraint unique_dish_name unique (name);
 
 create type ingredient_category as enum ('VEGETABLE', 'ANIMAL', 'MARINE', 'DAIRY', 'OTHER');
 
@@ -68,9 +70,9 @@ create table if not exists "table"
 
 create table if not exists table_order
 (
-    id_table               int references "table" (id) not null,
-    id_order               int references "order" (id) not null,
-    arrival_datetime timestamp without time zone not null,
-    departure_datetime       timestamp without time zone,
+    id_table           int references "table" (id) not null,
+    id_order           int references "order" (id) not null,
+    arrival_datetime   timestamp without time zone not null,
+    departure_datetime timestamp without time zone,
     constraint unique_table_order unique (id_order, id_table)
 );
