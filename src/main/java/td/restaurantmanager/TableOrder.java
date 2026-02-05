@@ -9,6 +9,12 @@ public class TableOrder {
     private final Instant departureDatetime;
 
     public TableOrder(Table table, Instant arrivalDatetime, Instant departureDatetime) {
+        if (arrivalDatetime == null) {
+            throw new IllegalArgumentException("Arrival datetime cannot be null");
+        }
+        if (departureDatetime != null && departureDatetime.isBefore(arrivalDatetime)) {
+            throw new IllegalArgumentException("Departure datetime must be after arrival");
+        }
         this.table = table;
         this.arrivalDatetime = arrivalDatetime;
         this.departureDatetime = departureDatetime;
@@ -41,7 +47,7 @@ public class TableOrder {
     @Override
     public String toString() {
         return "TableOrder{" +
-               "table=" + table +
+               "tableNumber=" + table.getNumber() +
                ", arrivalDatetime=" + arrivalDatetime +
                ", departureDatetime=" + departureDatetime +
                '}';

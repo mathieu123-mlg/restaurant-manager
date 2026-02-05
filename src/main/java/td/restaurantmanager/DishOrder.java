@@ -13,23 +13,18 @@ public class DishOrder {
         this.quantity = quantity;
     }
 
-    public Integer getId() {
-        return id;
-    }
+    public Integer getId() { return id; }
 
-    public Dish getDish() {
-        return dish;
-    }
+    public Dish getDish() { return dish; }
 
-    public Integer getQuantity() {
-        return quantity;
-    }
+    public Integer getQuantity() { return quantity; }
 
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         DishOrder dishOrder = (DishOrder) o;
-        return Objects.equals(id, dishOrder.id) && Objects.equals(dish, dishOrder.dish) && Objects.equals(quantity, dishOrder.quantity);
+        return Objects.equals(id, dishOrder.id) && Objects.equals(dish, dishOrder.dish)
+               && Objects.equals(quantity, dishOrder.quantity);
     }
 
     @Override

@@ -1,6 +1,6 @@
 \c mini_dish_db
 
-insert into dish (id, name, dish_type, selling_price)
+insert into dish (id, name, dish_type, price)
 VALUES (1, 'Salade fraîche', 'STARTER', 3500.00),
        (2, 'Poulet grillé', 'MAIN', 12000.00),
        (3, 'Riz au légume', 'MAIN', null),
@@ -9,7 +9,7 @@ VALUES (1, 'Salade fraîche', 'STARTER', 3500.00),
 ON CONFLICT (id) DO UPDATE
     set name          = EXCLUDED.name,
         dish_type     = EXCLUDED.dish_type,
-        selling_price = EXCLUDED.selling_price;
+        price = EXCLUDED.price;
 
 insert into ingredient (id, name, price, category)
 VALUES (1, 'Laitue', 800.00, 'VEGETABLE'),
