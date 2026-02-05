@@ -47,7 +47,7 @@ public class TableOrder {
     @Override
     public String toString() {
         return "TableOrder{" +
-               "tableNumber=" + table.getNumber() +
+               "tableNumber=" + table +
                ", arrivalDatetime=" + arrivalDatetime +
                ", departureDatetime=" + departureDatetime +
                '}';

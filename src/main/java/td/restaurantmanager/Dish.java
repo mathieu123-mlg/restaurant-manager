@@ -1,6 +1,7 @@
 package td.restaurantmanager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,7 +36,7 @@ public class Dish {
         return price;
     }
 
-    public List<DishIngredient> getDishIngredients() { return dishIngredients; }
+    public List<DishIngredient> getDishIngredients() { return Collections.unmodifiableList(dishIngredients); }
 
     public Double getDishCost() {
         if (price == null) {
@@ -57,23 +58,24 @@ public class Dish {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Dish dish = (Dish) o;
-        return Objects.equals(id, dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType
-               && Objects.equals(price, dish.price) && Objects.equals(dishIngredients, dish.dishIngredients);
+        return Objects.equals(id, dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(price, dish.price);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, dishType, price, dishIngredients);
+        return Objects.hash(id, name, dishType, price);
     }
 
     @Override
     public String toString() {
+        List<Ingredient> ingredients = getDishIngredients().stream()
+                .map(DishIngredient::getIngredient).toList();
         return "Dish{" +
                "id=" + id +
                ", name='" + name + '\'' +
                ", dishType=" + dishType +
                ", price=" + price +
-               ", ingredients=" + getDishIngredients().stream().map(DishIngredient::getIngredient).toList() +
+               ", ingredients=" + ingredients +
                '}';
     }
 }

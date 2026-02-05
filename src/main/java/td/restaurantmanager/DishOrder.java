@@ -8,6 +8,12 @@ public class DishOrder {
     private final Integer quantity;
 
     public DishOrder(Integer id, Dish dish, Integer quantity) {
+        if (dish == null) {
+            throw new IllegalArgumentException("Dish cannot be null");
+        }
+        if (quantity == null || quantity < 1) {
+            throw new IllegalArgumentException("Quantity must be at least 1");
+        }
         this.id = id;
         this.dish = dish;
         this.quantity = quantity;

@@ -47,7 +47,7 @@ public class Ingredient {
         return category;
     }
 
-    public List<StockMovement> getStockMovementList() { return stockMovementList; }
+    public List<StockMovement> getStockMovementList() { return Collections.unmodifiableList(stockMovementList); }
 
     public StockValue getStockValueAt(Instant instant) {
         if (stockMovementList == null || stockMovementList.isEmpty()) {
@@ -91,7 +91,8 @@ public class Ingredient {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Ingredient that = (Ingredient) o;
-        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(price, that.price) && category == that.category;
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name)
+               && Objects.equals(price, that.price) && category == that.category;
     }
 
     @Override
@@ -106,7 +107,6 @@ public class Ingredient {
                ", name='" + name + '\'' +
                ", price=" + price +
                ", category=" + category +
-//               ", stockMovementList=" + stockMovementList +
                ", actualStock=" + getStockValueAt(Instant.now()) +
                '}';
     }

@@ -2,6 +2,7 @@ package td.restaurantmanager;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -21,11 +22,7 @@ public class Order {
         }
         this.id = id;
         this.reference = reference;
-        if (creationDatetime == null) {
-            this.creationDatetime = Instant.now();
-        } else {
-            this.creationDatetime = creationDatetime;
-        }
+        this.creationDatetime = creationDatetime == null ? Instant.now() : creationDatetime;
         this.dishOrders = Objects.requireNonNullElseGet(dishOrders, ArrayList::new);
         this.table = table;
     }
@@ -36,7 +33,7 @@ public class Order {
 
     public Instant getCreationDatetime() { return creationDatetime; }
 
-    public List<DishOrder> getDishOrders() { return dishOrders; }
+    public List<DishOrder> getDishOrders() { return Collections.unmodifiableList(dishOrders); }
 
     public TableOrder getTable() { return table; }
 
@@ -55,7 +52,8 @@ public class Order {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Order order = (Order) o;
-        return Objects.equals(id, order.id) && Objects.equals(reference, order.reference) && Objects.equals(creationDatetime, order.creationDatetime);
+        return Objects.equals(id, order.id) && Objects.equals(reference, order.reference)
+               && Objects.equals(creationDatetime, order.creationDatetime);
     }
 
     @Override

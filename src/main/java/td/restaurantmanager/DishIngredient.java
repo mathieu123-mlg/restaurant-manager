@@ -17,43 +17,33 @@ public class DishIngredient {
         this.unit = unit;
     }
 
-    public Integer getId() {
-        return id;
-    }
+    public Integer getId() { return id; }
 
-    public Dish getDish() {
-        return dish;
-    }
+    public Dish getDish() { return dish; }
 
-    public Ingredient getIngredient() {
-        return ingredient;
-    }
+    public Ingredient getIngredient() { return ingredient; }
 
-    public Double getQuantityRequired() {
-        return quantityRequired;
-    }
+    public Double getQuantityRequired() { return quantityRequired; }
 
-    public UnitType getUnit() {
-        return unit;
-    }
+    public UnitType getUnit() { return unit; }
 
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         DishIngredient that = (DishIngredient) o;
-        return Objects.equals(dish, that.dish) && Objects.equals(ingredient, that.ingredient);
+        return Objects.equals(id, that.id) && Objects.equals(dish, that.dish) && Objects.equals(ingredient, that.ingredient) && Objects.equals(quantityRequired, that.quantityRequired) && unit == that.unit;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(dish, ingredient);
+        return Objects.hash(id, dish, ingredient, quantityRequired, unit);
     }
 
     @Override
     public String toString() {
         return "DishIngredient{" +
                "id=" + id +
-               ", dish=" + dish +
+               ", dishId=" + dish.getId() +
                ", ingredient=" + ingredient +
                ", quantityRequired=" + quantityRequired +
                ", unit=" + unit +
