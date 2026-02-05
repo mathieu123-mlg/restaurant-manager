@@ -7,8 +7,10 @@ create table if not exists dish
     id            serial primary key,
     name          varchar unique not null,
     dish_type     dish_type      not null default 'STARTER',
-    selling_price numeric(10, 2)
+    price numeric(10, 2)
 );
+
+alter table dish rename column selling_price to price;
 
 alter table dish add constraint unique_dish_name unique (name);
 
