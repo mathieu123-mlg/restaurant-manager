@@ -110,7 +110,35 @@ public class DataRetriever {
     }
 
     public List<Ingredient> findIngredients(int page, int size) {
-        throw new RuntimeException("Not Implemented");
+        String sql = """
+                select id, id, name, price, category
+                from ingredient limit ? offset ?""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, size);
+            ps.setInt(2, (page - 1) * size);
+            ResultSet rs = ps.executeQuery();
+            List<Ingredient> ingredients = new ArrayList<>();
+            while (rs.next()) {
+                Ingredient ingredient = new Ingredient(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getDouble("price"),
+                        CategoryEnum.valueOf(rs.getString("category"))
+                );
+                ingredients.add(ingredient);
+            }
+            Set<Integer> ingredientIds = ingredients.stream()
+                    .map(Ingredient::getId)
+                    .collect(Collectors.toSet());
+            var stockMovement = fetchStockMovementUsingExistantIds(ingredientIds);
+            for (Ingredient ingredient : ingredients) {
+                ingredient.setStockMovementList(stockMovement.get(ingredient.getId()));
+            }
+            return ingredients;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
