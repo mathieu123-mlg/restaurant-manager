@@ -140,9 +140,45 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     }
-    
+
+    public static void main(String[] args) {
+        DataRetriever data = new DataRetriever();
+/*
+        for (int i = 1; i < 6; i++) {
+            System.out.println(data.findDishById(i));
+        }
+
+        System.out.println();
+        System.out.println(data.findIngredients(1, 5));
+        System.out.println(data.findIngredients(2, 2));
+        System.out.println(data.findIngredients(2, 7));
+*/
+
+        System.out.println(data.createIngredients(data.findIngredients(1, 5)));
+    }
+
     public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
-        throw new RuntimeException("Not Implemented");
+        String inClause = newIngredients.stream()
+                .map(x -> "(?, ?, ?, ?)")
+                .collect(Collectors.joining(", "));
+        String sql = """
+                insert into ingredient (id, name, price, category)
+                values %s""".formatted(inClause);
+
+        try (Connection conn = dbConnection.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            conn.setAutoCommit(false);
+            int index = 1;
+            for (Ingredient ingredient : newIngredients) {
+                ps.setInt(index++, ingredient.getId());
+                ps.setString(index++, ingredient.getName());
+                ps.setDouble(index++, ingredient.getPrice());
+                ps.setObject(index++, ingredient.getCategory().name());
+            }
+            return newIngredients;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Dish saveDish(Dish dishToSave) {
