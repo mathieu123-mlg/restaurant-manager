@@ -11,20 +11,12 @@ public class Order {
     private final String reference;
     private final Instant creationDatetime;
     private final List<DishOrder> dishOrders;
-    private final TableOrder table;
-
-    public Order(Integer id, String reference, Instant creationDatetime, List<DishOrder> dishOrders, TableOrder table) {
-        if (reference == null || reference.isEmpty()) {
-            throw new IllegalArgumentException("Reference cannot be null or empty");
-        }
-        if (table == null) {
-            throw new IllegalArgumentException("Table of order cannot be null");
-        }
+    
+    public Order(Integer id, String reference, Instant creationDatetime, List<DishOrder> dishOrders) {
         this.id = id;
         this.reference = reference;
         this.creationDatetime = creationDatetime == null ? Instant.now() : creationDatetime;
         this.dishOrders = Objects.requireNonNullElseGet(dishOrders, ArrayList::new);
-        this.table = table;
     }
 
     public Integer getId() { return id; }
@@ -35,17 +27,17 @@ public class Order {
 
     public List<DishOrder> getDishOrders() { return Collections.unmodifiableList(dishOrders); }
 
-    public TableOrder getTable() { return table; }
+//    public TableOrder getTable() { return table; }
 
-    public Double getTotalAmountWithoutVAT() {
+    public Double getTotalAmountWithoutVat() {
         return dishOrders.stream()
                 .mapToDouble(d_o -> d_o.getDish().getPrice() * d_o.getQuantity())
                 .sum();
     }
 
-    public Double getTotalAmountWithVAt() {
+    public Double getTotalAmountWithVat() {
         final double VAT_RATE = 0.20;
-        return getTotalAmountWithoutVAT() * (1 + VAT_RATE);
+        return getTotalAmountWithoutVat() * (1 + VAT_RATE);
     }
 
     @Override
@@ -53,19 +45,21 @@ public class Order {
         if (o == null || getClass() != o.getClass()) return false;
         Order order = (Order) o;
         return Objects.equals(id, order.id) && Objects.equals(reference, order.reference)
-               && Objects.equals(creationDatetime, order.creationDatetime);
+                && Objects.equals(creationDatetime, order.creationDatetime) && Objects.equals(dishOrders, order.dishOrders);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, reference, creationDatetime);
+        return Objects.hash(id, reference, creationDatetime, dishOrders);
     }
 
     @Override
     public String toString() {
         return "Order{" +
                "id=" + id +
-               ", reference='" + reference + '\'' +
+                "totalAmountWithoutVat=" + getTotalAmountWithoutVat() +
+                "totalAmountWithVat=" + getTotalAmountWithVat() +
+                ", reference='" + reference + '\'' +
                ", creationDatetime=" + creationDatetime +
                ", dishOrders=" + dishOrders +
                '}';

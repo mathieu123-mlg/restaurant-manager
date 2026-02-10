@@ -55,9 +55,9 @@ public class StockMovement {
     public String toString() {
         return "StockMovement{" +
                "id=" + id +
-               ", value=" + value +
                ", type=" + type +
                ", creationDatetime=" + creationDatetime +
+               ", value=" + value +
                '}';
     }
 }

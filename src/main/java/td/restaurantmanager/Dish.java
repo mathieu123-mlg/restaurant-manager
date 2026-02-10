@@ -10,33 +10,38 @@ public class Dish {
     private final String name;
     private final DishTypeEnum dishType;
     private final Double price;
-    private final List<DishIngredient> dishIngredients;
+    private List<DishIngredient> dishIngredients;
 
     public Dish(Integer id, String name, DishTypeEnum dishType, Double price, List<DishIngredient> dishIngredients) {
         this.id = id;
         this.name = name;
         this.dishType = dishType;
         this.price = price;
-        this.dishIngredients = Objects.requireNonNullElseGet(dishIngredients, ArrayList::new);
+        this.dishIngredients = dishIngredients;
     }
 
-    public Integer getId() {
-        return id;
+    public Integer getId() { return id; }
+
+    public String getName() { return name; }
+
+    public DishTypeEnum getDishType() { return dishType; }
+
+    public Double getPrice() { return price; }
+
+    public List<DishIngredient> getDishIngredients() {
+        return dishIngredients;
     }
 
-    public String getName() {
-        return name;
+    public void setDishIngredients(List<DishIngredient> dishIngredients) {
+        if (dishIngredients == null) {
+            this.dishIngredients = new ArrayList<>();
+            return;
+        }
+        for (DishIngredient dishIngredient : dishIngredients) {
+            dishIngredient.setDish(this);
+        }
+        this.dishIngredients = dishIngredients;
     }
-
-    public DishTypeEnum getDishType() {
-        return dishType;
-    }
-
-    public Double getPrice() {
-        return price;
-    }
-
-    public List<DishIngredient> getDishIngredients() { return Collections.unmodifiableList(dishIngredients); }
 
     public Double getDishCost() {
         if (price == null) {
@@ -55,27 +60,25 @@ public class Dish {
     }
 
     @Override
+    public String toString() {
+        return "Dish{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", dishType=" + dishType +
+                ", price=" + price +
+                ", ingredient=" + dishIngredients +
+                '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Dish dish = (Dish) o;
-        return Objects.equals(id, dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(price, dish.price);
+        return Objects.equals(id, dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(price, dish.price) && Objects.equals(dishIngredients, dish.dishIngredients);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, dishType, price);
-    }
-
-    @Override
-    public String toString() {
-        List<Ingredient> ingredients = getDishIngredients().stream()
-                .map(DishIngredient::getIngredient).toList();
-        return "Dish{" +
-               "id=" + id +
-               ", name='" + name + '\'' +
-               ", dishType=" + dishType +
-               ", price=" + price +
-               ", ingredients=" + ingredients +
-               '}';
+        return Objects.hash(id, name, dishType, price, dishIngredients);
     }
 }

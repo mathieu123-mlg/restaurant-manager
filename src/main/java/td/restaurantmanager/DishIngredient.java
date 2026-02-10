@@ -1,23 +1,16 @@
 package td.restaurantmanager;
 
-import java.util.Objects;
-
 public class DishIngredient {
-    private final Integer id;
-    private final Dish dish;
+    private Dish dish;
     private final Ingredient ingredient;
     private final Double quantityRequired;
     private final UnitType unit;
 
-    public DishIngredient(Integer id, Dish dish, Ingredient ingredient, Double quantityRequired, UnitType unit) {
-        this.id = id;
-        this.dish = dish;
+    public DishIngredient(Ingredient ingredient, Double quantityRequired, UnitType unit) {
         this.ingredient = ingredient;
         this.quantityRequired = quantityRequired;
         this.unit = unit;
     }
-
-    public Integer getId() { return id; }
 
     public Dish getDish() { return dish; }
 
@@ -27,23 +20,11 @@ public class DishIngredient {
 
     public UnitType getUnit() { return unit; }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        DishIngredient that = (DishIngredient) o;
-        return Objects.equals(id, that.id) && Objects.equals(dish, that.dish) && Objects.equals(ingredient, that.ingredient) && Objects.equals(quantityRequired, that.quantityRequired) && unit == that.unit;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, dish, ingredient, quantityRequired, unit);
-    }
+    public void setDish(Dish dish) { this.dish = dish; }
 
     @Override
     public String toString() {
         return "DishIngredient{" +
-               "id=" + id +
-               ", dishId=" + dish.getId() +
                ", ingredient=" + ingredient +
                ", quantityRequired=" + quantityRequired +
                ", unit=" + unit +

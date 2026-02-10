@@ -1,9 +1,14 @@
 package td.restaurantmanager;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
+import static java.time.Instant.now;
 
 public class Ingredient {
     private final Integer id;
@@ -13,9 +18,6 @@ public class Ingredient {
     private final List<StockMovement> stockMovementList;
 
     public Ingredient(Integer id, String name, Double price, CategoryEnum category) {
-        if (price == null || price < 0) {
-            throw new IllegalArgumentException("Price cannot be null or negative");
-        }
         this.id = id;
         this.name = name;
         this.price = price;
@@ -47,7 +49,7 @@ public class Ingredient {
         return category;
     }
 
-    public List<StockMovement> getStockMovementList() { return Collections.unmodifiableList(stockMovementList); }
+    public List<StockMovement> getStockMovementList() { return stockMovementList; }
 
     public StockValue getStockValueAt(Instant instant) {
         if (stockMovementList == null || stockMovementList.isEmpty()) {
@@ -107,7 +109,7 @@ public class Ingredient {
                ", name='" + name + '\'' +
                ", price=" + price +
                ", category=" + category +
-               ", actualStock=" + getStockValueAt(Instant.now()) +
+               ", actualStock=" + getStockValueAt(now()) +
                '}';
     }
 }
