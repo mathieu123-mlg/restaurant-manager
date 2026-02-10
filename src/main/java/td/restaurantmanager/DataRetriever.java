@@ -57,7 +57,7 @@ public class DataRetriever {
             Set<Integer> ingredientIds = dishIngredients.stream()
                     .map(d_i -> d_i.getIngredient().getId())
                     .collect(Collectors.toSet());
-            var stockMovementList = fetchStockMovementUsingExistantIds(ingredientIds);
+            var stockMovementList = fetchStockMovementUsingExistingIds(ingredientIds);
             dish.setDishIngredients(dishIngredients, stockMovementList);
             return dish;
         } catch (SQLException e) {
@@ -65,7 +65,7 @@ public class DataRetriever {
         }
     }
 
-    private Map<Integer, List<StockMovement>> fetchStockMovementUsingExistantIds(Set<Integer> ingredientIds) {
+    private Map<Integer, List<StockMovement>> fetchStockMovementUsingExistingIds(Set<Integer> ingredientIds) {
         if (ingredientIds.isEmpty()) {
             return new HashMap<>();
         }
@@ -131,7 +131,7 @@ public class DataRetriever {
             Set<Integer> ingredientIds = ingredients.stream()
                     .map(Ingredient::getId)
                     .collect(Collectors.toSet());
-            var stockMovement = fetchStockMovementUsingExistantIds(ingredientIds);
+            var stockMovement = fetchStockMovementUsingExistingIds(ingredientIds);
             for (Ingredient ingredient : ingredients) {
                 ingredient.setStockMovementList(stockMovement.get(ingredient.getId()));
             }
@@ -140,7 +140,7 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     }
-
+    
     public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
         throw new RuntimeException("Not Implemented");
     }
