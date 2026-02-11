@@ -15,7 +15,7 @@ public class Ingredient {
     private final String name;
     private final Double price;
     private final CategoryEnum category;
-    private final List<StockMovement> stockMovementList;
+    private List<StockMovement> stockMovementList;
 
     public Ingredient(Integer id, String name, Double price, CategoryEnum category) {
         this.id = id;
@@ -50,6 +50,10 @@ public class Ingredient {
     }
 
     public List<StockMovement> getStockMovementList() { return stockMovementList; }
+
+    public void setStockMovementList(List<StockMovement> stockMovementList) {
+        this.stockMovementList = stockMovementList;
+    }
 
     public StockValue getStockValueAt(Instant instant) {
         if (stockMovementList == null || stockMovementList.isEmpty()) {

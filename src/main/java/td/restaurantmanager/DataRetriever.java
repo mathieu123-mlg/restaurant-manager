@@ -1,6 +1,10 @@
 package td.restaurantmanager;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -337,59 +341,6 @@ public class DataRetriever {
 
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum categoryName, String dishName, int page, int size) {
         throw new RuntimeException("Not Implemented");
-    }
-
-    public static void main(String[] args) {
-        DataRetriever data = new DataRetriever(); /*
-        for (int i = 1; i < 6; i++) {
-            System.out.println(data.findDishById(i));
-        }
-
-        System.out.println();
-        System.out.println(data.findIngredients(1, 5));
-        System.out.println(data.findIngredients(2, 2));
-        System.out.println(data.findIngredients(2, 7));
-        List<Ingredient> ingredientList = List.of(
-                new Ingredient(6, "Citrouille", 4_200.0, CategoryEnum.VEGETABLE),
-                new Ingredient(7, "Porc", 200.0, CategoryEnum.ANIMAL),
-                new Ingredient(8, "Poivre", 1_000.0, CategoryEnum.VEGETABLE)
-        );
-        System.out.println(data.createIngredients(ingredientList));
-*//*
-        Dish dishToSave1 = new Dish(
-                null,
-                "Vary @ anana",
-                DishTypeEnum.MAIN,
-                1_000.0,
-                List.of(new DishIngredient(new Ingredient(null, "Anana", 500.0, CategoryEnum.VEGETABLE), 4.0, UnitType.PCS),
-                        new DishIngredient(new Ingredient(null, "Vary", 500.0, CategoryEnum.VEGETABLE), 0.4, UnitType.KG))
-        );
-        Ingredient laitue = data.findIngredientById(1);
-        Ingredient poulet = data.findIngredientById(3);
-        Dish dishToSave2 = new Dish(
-                6,
-                "Vary",
-                DishTypeEnum.STARTER,
-                3_500.0,
-                List.of(new DishIngredient(laitue, 0.15, UnitType.KG),
-                        new DishIngredient(poulet, 5.0, UnitType.KG))
-        );
-        Dish dishToSave3 = new Dish(
-                7,
-                "Riz",
-                DishTypeEnum.MAIN,
-                3_500.0,
-                null
-        );
-        System.out.println("dishToSave ---- 111111111");
-        System.out.println(data.saveDish(dishToSave1));
-        System.out.println("dishToSave ---- 222222222");
-        System.out.println(data.saveDish(dishToSave2));
-        System.out.println("dishToSave ---- 333333333");
-        System.out.println(data.saveDish(dishToSave3));
-*//*
-        System.out.println(data.findDishByIngredientName("o"));*/
-        System.out.println(data.saveIngredient(new Ingredient(null, "sel", 200.0, CategoryEnum.DAIRY)));
     }
 
     public Ingredient saveIngredient(Ingredient ingredientToSave) {

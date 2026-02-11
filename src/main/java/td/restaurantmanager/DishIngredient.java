@@ -1,5 +1,7 @@
 package td.restaurantmanager;
 
+import java.util.List;
+
 public class DishIngredient {
     private Dish dish;
     private final Ingredient ingredient;
@@ -25,9 +27,16 @@ public class DishIngredient {
     @Override
     public String toString() {
         return "DishIngredient{" +
-               ", ingredient=" + ingredient +
+               "ingredient=" + ingredient +
                ", quantityRequired=" + quantityRequired +
                ", unit=" + unit +
                '}';
+    }
+
+    public void setIngredientsStockMovement(List<StockMovement> stockMovements) {
+        if (stockMovements.isEmpty()) {
+            return;
+        }
+        this.ingredient.setStockMovementList(stockMovements);
     }
 }

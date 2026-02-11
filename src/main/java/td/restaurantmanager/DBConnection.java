@@ -11,12 +11,12 @@ public class DBConnection {
         try {
             Dotenv dotenv = Dotenv.load();
 
-            String jdbc_url = dotenv.get("DB_JDBC_URL");
-            String username = dotenv.get("DB_USERNAME");
-            String password = dotenv.get("DB_PASSWORD");
+            String jdbc_url = dotenv.get("JDBC_URL");
+            String username = dotenv.get("USER");
+            String password = dotenv.get("PASSWORD");
 
             if (jdbc_url == null || username == null || password == null) {
-                throw new RuntimeException("DB_JDBC_URL, DB_USERNAME or DB_PASSWORD NULL");
+                throw new RuntimeException("JDBC_URL, USER or PASSWORD NULL");
             }
 
             return DriverManager.getConnection(jdbc_url, username, password);

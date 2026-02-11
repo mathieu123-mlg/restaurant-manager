@@ -1,12 +1,14 @@
 package td.restaurantmanager;
-
+/*
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+*/
 
 public class Table {
+/*
     private final Integer id;
     private final int number;
     private final List<Order> orders;
@@ -71,4 +73,5 @@ public class Table {
                ", number=" + number +
                '}';
     }
+*/
 }

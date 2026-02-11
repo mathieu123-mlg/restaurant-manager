@@ -1,8 +1,8 @@
 package td.restaurantmanager;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class Dish {
@@ -17,7 +17,7 @@ public class Dish {
         this.name = name;
         this.dishType = dishType;
         this.price = price;
-        this.dishIngredients = dishIngredients;
+        this.dishIngredients = dishIngredients != null ? dishIngredients : new ArrayList<>();
     }
 
     public Integer getId() { return id; }
@@ -32,13 +32,16 @@ public class Dish {
         return dishIngredients;
     }
 
-    public void setDishIngredients(List<DishIngredient> dishIngredients) {
-        if (dishIngredients == null) {
+    public void setDishIngredients(List<DishIngredient> dishIngredients, Map<Integer, List<StockMovement>> stockMovements) {
+        if (dishIngredients == null || dishIngredients.isEmpty()) {
             this.dishIngredients = new ArrayList<>();
             return;
         }
         for (DishIngredient dishIngredient : dishIngredients) {
             dishIngredient.setDish(this);
+            if (!stockMovements.isEmpty()) {
+                dishIngredient.setIngredientsStockMovement(stockMovements.get(dishIngredient.getIngredient().getId()));
+            }
         }
         this.dishIngredients = dishIngredients;
     }
@@ -60,17 +63,6 @@ public class Dish {
     }
 
     @Override
-    public String toString() {
-        return "Dish{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", dishType=" + dishType +
-                ", price=" + price +
-                ", ingredient=" + dishIngredients +
-                '}';
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Dish dish = (Dish) o;
@@ -80,5 +72,16 @@ public class Dish {
     @Override
     public int hashCode() {
         return Objects.hash(id, name, dishType, price, dishIngredients);
+    }
+
+    @Override
+    public String toString() {
+        return "Dish{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", dishType=" + dishType +
+                ", price=" + price +
+                ", dishIngredients=" + dishIngredients +
+                '}';
     }
 }
