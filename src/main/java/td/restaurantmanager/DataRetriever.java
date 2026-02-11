@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class DataRetriever {
@@ -141,44 +143,71 @@ public class DataRetriever {
         }
     }
 
-    public static void main(String[] args) {
-        DataRetriever data = new DataRetriever();
-/*
-        for (int i = 1; i < 6; i++) {
-            System.out.println(data.findDishById(i));
-        }
-
-        System.out.println();
-        System.out.println(data.findIngredients(1, 5));
-        System.out.println(data.findIngredients(2, 2));
-        System.out.println(data.findIngredients(2, 7));
-*/
-
-        System.out.println(data.createIngredients(data.findIngredients(1, 5)));
-    }
-
     public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
         String inClause = newIngredients.stream()
-                .map(x -> "(?, ?, ?, ?)")
+                .map(x -> "(?, ?, ?, ?::ingredient_category)")
                 .collect(Collectors.joining(", "));
         String sql = """
                 insert into ingredient (id, name, price, category)
                 values %s""".formatted(inClause);
 
         try (Connection conn = dbConnection.getDBConnection();
-                PreparedStatement ps = conn.prepareStatement(sql)) {
-            conn.setAutoCommit(false);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             int index = 1;
-            for (Ingredient ingredient : newIngredients) {
-                ps.setInt(index++, ingredient.getId());
-                ps.setString(index++, ingredient.getName());
-                ps.setDouble(index++, ingredient.getPrice());
-                ps.setObject(index++, ingredient.getCategory().name());
+            int idx = next_id(conn, "ingredient");
+            List<Ingredient> createdIngredients = new ArrayList<>();
+            for (Ingredient ing : newIngredients) {
+                if (ing.getId() == null) {
+                    ps.setInt(index++, idx);
+                    ing = new Ingredient(idx++, ing.getName(), ing.getPrice(), ing.getCategory());
+                } else {
+                    ps.setInt(index++, ing.getId());
+                }
+                ps.setString(index++, ing.getName());
+                ps.setDouble(index++, ing.getPrice());
+                ps.setObject(index++, ing.getCategory().name());
+                createdIngredients.add(ing);
             }
-            return newIngredients;
+            ps.executeUpdate();
+            return createdIngredients;
+        } catch (SQLException e) {
+            duplicationError(e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Integer next_id(Connection conn, String table) {
+        String sql = "select coalesce(max(id), 0) + 1 from %s limit 1"
+                .formatted("\"" + table + "\"");
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            rs.next();
+            return rs.getInt(1);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void duplicationError(SQLException e) {
+        String message = e.getMessage();
+        String duplicateValue = extractDuplicateValue(message);
+
+        if (message.contains("ingredient_name_key") || message.contains("(name)=")) {
+            throw new RuntimeException(duplicateValue + " already exist");
+        } else if (message.contains("ingredient_pkey") || message.contains("(id)=")) {
+            throw new RuntimeException(duplicateValue + " already exist");
+        }
+    }
+
+    private String extractDuplicateValue(String detail) {
+        // Find pattern : (column)=(value)
+        Pattern p = Pattern.compile("\\(([^)]+)\\)\\s*=\\s*\\(([^)]+)\\)");
+        Matcher m = p.matcher(detail);
+
+        if (m.find()) {
+            return m.group().trim();
+        }
+        return detail;
     }
 
     public Dish saveDish(Dish dishToSave) {
