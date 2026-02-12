@@ -1,8 +1,22 @@
 package td.restaurantmanager;
 
-import java.sql.*;
+import org.json.JSONArray;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.*;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -594,7 +608,7 @@ public class DataRetriever {
                         UnitType.valueOf(rs.getString("unit"))
                 );
             }
-            throw new RuntimeException("Ingredient(" + ingredientIdentifier + ") not found");
+            return new StockValue(0.0, UnitType.KG);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -639,6 +653,70 @@ public class DataRetriever {
                 return rs.getDouble("gross_margin");
             }
             throw new RuntimeException("Dish(" + dishId + ") not found");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public HashMap<String, List<StatsFormat>> stockStatistic(Periodicity periodicity, Instant intervalMin, Instant intervalMax) {
+        String sql = """
+        SELECT i.name,
+               json_agg(
+                   jsonb_build_array(
+                       to_char(gs.periodicity, 'YYYY-MM-DD'),
+                       COALESCE(
+                           (SELECT SUM(CASE WHEN stock.type = 'IN' THEN stock.quantity ELSE -stock.quantity END)
+                            FROM stock_movement stock
+                            WHERE stock.id_ingredient = i.id AND stock.creation_datetime <=
+                                  (gs.periodicity + ?::interval - INTERVAL '1 microsecond')),
+                           0)::numeric(12,3),
+                       COALESCE(
+                           (SELECT stock.unit::text FROM stock_movement stock
+                            WHERE stock.id_ingredient = i.id
+                            ORDER BY stock.creation_datetime DESC LIMIT 1),
+                           'KG')::unit_type
+                   ) ORDER BY gs.periodicity
+               ) AS stock_statistic
+        FROM ingredient i
+        CROSS JOIN LATERAL generate_series(?::date, ?::date, ?::interval) gs(periodicity)
+        GROUP BY i.id, i.name
+        ORDER BY i.name;""";
+
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            String period = "1 " + periodicity.name().toLowerCase();
+            ps.setString(1, period);
+            ps.setDate(2, Date.valueOf(intervalMin.atZone(ZoneId.systemDefault()).toLocalDate()));
+            ps.setDate(3, Date.valueOf(intervalMax.atZone(ZoneId.systemDefault()).toLocalDate()));
+            ps.setString(4, period);
+
+            ResultSet rs = ps.executeQuery();
+            HashMap<String, List<StatsFormat>> result = new HashMap<>();
+            while (rs.next()) {
+                String name = rs.getString("name");
+                String json = rs.getString("stock_statistic");
+
+                if (json == null) {
+                    result.put(name, List.of());
+                    continue;
+                }
+
+                JSONArray arr = new JSONArray(json);
+                List<StatsFormat> stats = new ArrayList<>();
+
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONArray item = arr.getJSONArray(i);
+                    stats.add(new StatsFormat(
+                            Instant.parse(item.getString(0)),
+                            new StockValue(
+                                    item.getDouble(1),
+                                    UnitType.valueOf(item.getString(2))
+                            )
+                    ));
+                }
+                result.put(name, stats);
+            }
+            return result;
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
