@@ -1,16 +1,7 @@
 package td.restaurantmanager;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.sql.*;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -29,48 +20,68 @@ public class DataRetriever {
                 where d.id = ?""";
         try (Connection conn = dbConnection.getDBConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, idDish);
-            ResultSet rs = ps.executeQuery();
-            Dish dish = null;
-            List<DishIngredient> dishIngredients = new ArrayList<>();
-            while (rs.next()) {
-                if (dish == null) {
-                    dish = new Dish(
-                            rs.getInt("dish_id"),
-                            rs.getString("dish_name"),
-                            DishTypeEnum.valueOf(rs.getString("dish_type")),
-                            rs.getDouble("dish_price"),
-                            new ArrayList<>()
-                    );
-                }
-                if (rs.getInt("di_id") > 0) {
-                    Integer ing_id = rs.getInt("ingredient_id");
-                    Ingredient ingredient = new Ingredient(
-                            ing_id,
-                            rs.getString("ingredient_name"),
-                            rs.getDouble("ingredient_price"),
-                            CategoryEnum.valueOf(rs.getString("category"))
-                    );
-                    DishIngredient dishIngredient = new DishIngredient(
-                            ingredient,
-                            rs.getDouble("quantity_required"),
-                            UnitType.valueOf(rs.getString("unit"))
-                    );
-                    dishIngredients.add(dishIngredient);
-                }
-            }
-            if (dish == null) {
-                throw new RuntimeException("Dish(id=" + idDish + ") not found");
-            }
-            Set<Integer> ingredientIds = dishIngredients.stream()
-                    .map(d_i -> d_i.getIngredient().getId())
-                    .collect(Collectors.toSet());
-            var stockMovementList = fetchStockMovementUsingExistingIds(ingredientIds);
-            dish.setDishIngredients(dishIngredients, stockMovementList);
-            return dish;
+            return getSearchDishById(idDish, ps);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public Dish findDishById(Connection conn, Integer idDish) {
+        String sql = """
+                select d.id as dish_id, d.name as dish_name, d.dish_type as dish_type, d.price as dish_price,
+                d_i.id as di_id, d_i.id_ingredient, d_i.quantity_required, d_i.unit,
+                i.id as ingredient_id, i.name as ingredient_name, i.price as ingredient_price, i.category
+                from dish d
+                left join dish_ingredient d_i on d_i.id_dish = d.id
+                left join ingredient i on d_i.id_ingredient = i.id
+                where d.id = ?""";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            return getSearchDishById(idDish, ps);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Dish getSearchDishById(Integer idDish, PreparedStatement ps) throws SQLException {
+        ps.setInt(1, idDish);
+        ResultSet rs = ps.executeQuery();
+        Dish dish = null;
+        List<DishIngredient> dishIngredients = new ArrayList<>();
+        while (rs.next()) {
+            if (dish == null) {
+                dish = new Dish(
+                        rs.getInt("dish_id"),
+                        rs.getString("dish_name"),
+                        DishTypeEnum.valueOf(rs.getString("dish_type")),
+                        rs.getDouble("dish_price"),
+                        new ArrayList<>()
+                );
+            }
+            if (rs.getInt("di_id") > 0) {
+                Integer ing_id = rs.getInt("ingredient_id");
+                Ingredient ingredient = new Ingredient(
+                        ing_id,
+                        rs.getString("ingredient_name"),
+                        rs.getDouble("ingredient_price"),
+                        CategoryEnum.valueOf(rs.getString("category"))
+                );
+                DishIngredient dishIngredient = new DishIngredient(
+                        ingredient,
+                        rs.getDouble("quantity_required"),
+                        UnitType.valueOf(rs.getString("unit"))
+                );
+                dishIngredients.add(dishIngredient);
+            }
+        }
+        if (dish == null) {
+            throw new RuntimeException("Dish(id=" + idDish + ") not found");
+        }
+        Set<Integer> ingredientIds = dishIngredients.stream()
+                .map(d_i -> d_i.getIngredient().getId())
+                .collect(Collectors.toSet());
+        var stockMovementList = fetchStockMovementUsingExistingIds(ingredientIds);
+        dish.setDishIngredients(dishIngredients, stockMovementList);
+        return dish;
     }
 
     private Map<Integer, List<StockMovement>> fetchStockMovementUsingExistingIds(Set<Integer> ingredientIds) {
@@ -326,7 +337,7 @@ public class DataRetriever {
                 where i.name ilike ? order by d.id""";
         try (Connection conn = dbConnection.getDBConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, "%"+ingredientName+"%");
+            ps.setString(1, "%" + ingredientName + "%");
             ResultSet rs = ps.executeQuery();
             List<Dish> dishes = new ArrayList<>();
             while (rs.next()) {
@@ -419,7 +430,45 @@ public class DataRetriever {
     }
 
     public Order findOrderByReference(String reference) {
-        throw new RuntimeException("Not Implemented");
+        String sql = """
+                select "order".id as order_id, "order".reference, "order".creation_datetime,
+                        d_o.id as d_o_id, d_o.id_dish, d_o.quantity
+                from "order"
+                left join dish_order d_o on d_o.id_order = "order".id
+                where reference like ?;""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, reference);
+            ResultSet rs = ps.executeQuery();
+            Order order = null;
+            List<DishOrder> dishOrders = new ArrayList<>();
+            while (rs.next()) {
+                if (order == null) {
+                    order = new Order(
+                            rs.getInt("order_id"),
+                            rs.getString("reference"),
+                            rs.getTimestamp("creation_datetime").toInstant(),
+                            null
+                    );
+                }
+                int idOrder = rs.getInt("d_o_id");
+                if (idOrder > 0) {
+                    DishOrder dishOrder = new DishOrder(
+                            idOrder,
+                            findDishById(conn, rs.getInt("id_dish")),
+                            rs.getInt("quantity")
+                    );
+                    dishOrders.add(dishOrder);
+                }
+            }
+            if (order == null) {
+                throw new RuntimeException("Order(reference=" + reference + ") not found");
+            }
+            order.setDishOrder(dishOrders);
+            return order;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Ingredient findIngredientById(int idIngredient) {
