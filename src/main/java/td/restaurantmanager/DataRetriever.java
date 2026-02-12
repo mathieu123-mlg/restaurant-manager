@@ -1,6 +1,7 @@
 package td.restaurantmanager;
 
 import java.sql.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -426,7 +427,84 @@ public class DataRetriever {
     }
 
     public Order saveOrder(Order orderToSave) {
+        String sql = """
+                insert into "order" (id, reference, creation_datetime)
+                values (?, ?, ?) on conflict (id) do update set reference = excluded.reference, creation_datetime = excluded.creation_datetime
+                returning id""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            conn.setAutoCommit(false);
+            Integer idOrder;
+            Order savedOrder;
+            if (orderToSave.getId() == null) {
+                idOrder = next_id(conn, "order");
+            } else {
+                idOrder = orderToSave.getId();
+            }
+            ps.setInt(1, idOrder);
+            if (orderToSave.getReference() == null) {
+                ps.setString(2, getReferenceSequenceOrder());
+            } else {
+                ps.setString(2, orderToSave.getReference());
+            }
+            ps.setTimestamp(3, Timestamp.from(orderToSave.getCreationDatetime()));
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                savedOrder = new Order(
+                        idOrder,
+                        orderToSave.getReference(),
+                        orderToSave.getCreationDatetime(),
+                        null
+                );
+                detachDishOrder(conn, idOrder);
+                List<DishOrder> dishOrders = findDishOrderByOrderId(idOrder);
+                if (!orderToSave.getDishOrders().isEmpty()) {
+//                    attachDishOrder(conn, idOrder, dishOrders);
+                }
+                savedOrder.setDishOrder(dishOrders);
+                conn.commit();
+                return savedOrder;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw new RuntimeException(e);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private List<DishOrder> findDishOrderByOrderId(Integer idOrder) {
+        String sql = """
+                select * from dish_order""";
         throw new RuntimeException("Not Implemented");
+    }
+
+    private void detachDishOrder(Connection conn, Integer idOrder) {
+        String sql = """
+                delete from dish_order where id_order = ?;""";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idOrder);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String getReferenceSequenceOrder() {
+        String sql = """
+                SELECT 'ORD' || LPAD(
+                        CAST(COALESCE(MAX(num), 0) + 1 AS TEXT), 5, '0') AS next_reference
+                FROM (SELECT CAST(SUBSTRING(reference FROM 4) AS INTEGER) AS num
+                      FROM "order"
+                      WHERE reference ~ '^ORD\\d{5}$') t limit 1;""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            rs.next();
+            return rs.getString("next_reference");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Order findOrderByReference(String reference) {
@@ -488,6 +566,84 @@ public class DataRetriever {
                 );
             }
             throw new RuntimeException("Ingredient(" + idIngredient + ") not found");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public StockValue getStockValueAt(Instant t, Integer ingredientIdentifier) {
+        String sql = """
+                SELECT unit, SUM(
+                    CASE
+                        WHEN type = 'IN'  THEN quantity
+                        WHEN type = 'OUT' THEN -quantity
+                        ELSE 0
+                    END
+                ) AS actual_quantity
+                FROM stock_movement
+                WHERE id_ingredient = ? and creation_datetime <= ?
+                GROUP BY (unit, id_ingredient);""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ingredientIdentifier);
+            ps.setTimestamp(2, Timestamp.from(t));
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new StockValue(
+                        rs.getDouble("actual_quantity"),
+                        UnitType.valueOf(rs.getString("unit"))
+                );
+            }
+            throw new RuntimeException("Ingredient(" + ingredientIdentifier + ") not found");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Double getDishCost(Integer dishId) {
+        String sql = """
+                select sum(
+                    case
+                        when ingredient.price = null then 0
+                        else ingredient.price * d_i.quantity_required
+                    end) as total
+                from dish_ingredient d_i
+                join ingredient on d_i.id_ingredient = ingredient.id
+                where d_i.id_dish = ?;""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, dishId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble("total");
+            }
+            throw new RuntimeException("Dish(" + dishId + ") not found");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Double getGrossMargin(Integer dishId) {
+        String sql = """
+                select sum((dish.price)
+                - (select sum(
+                    case
+                        when ingredient.price = null then 0
+                        else ingredient.price * d_i.quantity_required
+                    end) as total
+                from dish_ingredient d_i
+                join ingredient on d_i.id_ingredient = ingredient.id
+                where d_i.id_dish = ?)) as gross_margin
+                from dish where dish.id = ?;""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, dishId);
+            ps.setInt(2, dishId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble("gross_margin");
+            }
+            throw new RuntimeException("Dish(" + dishId + ") not found");
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
