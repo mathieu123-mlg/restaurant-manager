@@ -624,6 +624,7 @@ public class DataRetriever {
     }
 
     public Double getGrossMargin(Integer dishId) {
+/*
         String sql = """
                 select sum((dish.price)
                 - (select sum(
@@ -635,6 +636,14 @@ public class DataRetriever {
                 join ingredient on d_i.id_ingredient = ingredient.id
                 where d_i.id_dish = ?)) as gross_margin
                 from dish where dish.id = ?;""";
+*/
+        String sql = """
+                SELECT d.price - SUM(i.price * di.quantity_required) AS gross_margin
+                FROM dish d
+                LEFT JOIN dish_ingredient di ON di.id_dish = d.id
+                LEFT JOIN ingredient i ON i.id = di.id_ingredient
+                WHERE d.id = ?
+                GROUP BY d.id, d.price;""";
         try (Connection conn = dbConnection.getDBConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, dishId);
