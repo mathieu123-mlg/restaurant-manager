@@ -240,6 +240,8 @@ public class DataRetriever {
             throw new RuntimeException(duplicateValue + " already exist");
         } else if (message.contains("unique_dish_ingredient") || message.contains("(id_dish, id_ingredient)=")) {
             throw new RuntimeException(duplicateValue + " already exist");
+        } else if (message.contains("unique_dish_order") || message.contains("(id_order, id_dish)=")) {
+            throw new RuntimeException(duplicateValue + " already exist");
         }
     }
 
@@ -261,40 +263,56 @@ public class DataRetriever {
                 returning id""";
         try (Connection conn = dbConnection.getDBConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            conn.setAutoCommit(false);
-            Integer idDish = dishToSave.getId() == null ? next_id(conn, "dish") : dishToSave.getId();
-            ps.setInt(1, idDish);
-            ps.setString(2, dishToSave.getName());
-            ps.setObject(3, dishToSave.getDishType().name());
-            ps.setDouble(4, dishToSave.getPrice());
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                Dish dish = new Dish(idDish, dishToSave.getName(), dishToSave.getDishType(), dishToSave.getPrice(),
-                        dishToSave.getDishIngredients());
-
-                List<DishIngredient> dishIngredients = dishToSave.getDishIngredients();
-
-                detachDishIngredient(conn, idDish);
-                if (!dishIngredients.isEmpty()) {
-                    List<Ingredient> ingredients = createIngredients(conn, dishIngredients.stream()
-                            .map(DishIngredient::getIngredient).toList());
-                    List<DishIngredient> tempDishIngredients = new ArrayList<>();
-                    for (int i = 0; i < ingredients.size(); i++) {
-                        tempDishIngredients.add(new DishIngredient(ingredients.get(i), dishIngredients.get(i).getQuantityRequired(), dishIngredients.get(i).getUnit()));
-                    }
-                    dishIngredients = tempDishIngredients;
-                    attachDishIngredient(conn, idDish, dishIngredients);
-                    var stockMovements = fetchStockMovementUsingExistingIds(dishIngredients.stream()
-                            .map(x -> x.getIngredient().getId()).collect(Collectors.toSet()));
-                    dish.setDishIngredients(dishIngredients, stockMovements);
-                }
-                conn.commit();
-                return dish;
-            } catch (SQLException e) {
-                conn.rollback();
-                throw new RuntimeException(e);
-            }
+            return getDishSaving(conn, dishToSave, ps);
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Dish saveDish(Connection conn, Dish dishToSave) {
+        String sql = """
+                insert into dish (id, name, dish_type, price) values (?, ?, ?::dish_type, ?)
+                on conflict (id) do update set name = excluded.name, dish_type = excluded.dish_type, price = excluded.price
+                returning id""";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            return getDishSaving(conn, dishToSave, ps);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Dish getDishSaving(Connection conn, Dish dishToSave, PreparedStatement ps) throws SQLException {
+        conn.setAutoCommit(false);
+        Integer idDish = dishToSave.getId() == null ? next_id(conn, "dish") : dishToSave.getId();
+        ps.setInt(1, idDish);
+        ps.setString(2, dishToSave.getName());
+        ps.setObject(3, dishToSave.getDishType().name());
+        ps.setDouble(4, dishToSave.getPrice());
+        try (ResultSet rs = ps.executeQuery()) {
+            rs.next();
+            Dish dish = new Dish(idDish, dishToSave.getName(), dishToSave.getDishType(), dishToSave.getPrice(),
+                    dishToSave.getDishIngredients());
+
+            List<DishIngredient> dishIngredients = dishToSave.getDishIngredients();
+
+            detachDishIngredient(conn, idDish);
+            if (!dishIngredients.isEmpty()) {
+                List<Ingredient> ingredients = createIngredients(conn, dishIngredients.stream()
+                        .map(DishIngredient::getIngredient).toList());
+                List<DishIngredient> tempDishIngredients = new ArrayList<>();
+                for (int i = 0; i < ingredients.size(); i++) {
+                    tempDishIngredients.add(new DishIngredient(ingredients.get(i), dishIngredients.get(i).getQuantityRequired(), dishIngredients.get(i).getUnit()));
+                }
+                dishIngredients = tempDishIngredients;
+                attachDishIngredient(conn, idDish, dishIngredients);
+                var stockMovements = fetchStockMovementUsingExistingIds(dishIngredients.stream()
+                        .map(x -> x.getIngredient().getId()).collect(Collectors.toSet()));
+                dish.setDishIngredients(dishIngredients, stockMovements);
+            }
+            conn.commit();
+            return dish;
+        } catch (SQLException e) {
+            conn.rollback();
             throw new RuntimeException(e);
         }
     }
@@ -430,93 +448,6 @@ public class DataRetriever {
         }
     }
 
-
-    public static void main(String[] args) {
-        DataRetriever data = new DataRetriever();/*        System.out.println(data.findIngredientById(1).getStockValueAt(Instant.now()));
-        System.out.println(data.getStockValueAt(Instant.now(), 1));
-
-        System.out.println(data.findDishById(1).getDishCost());
-        System.out.println(data.getDishCost(1));
-
-        System.out.println(data.findDishById(1).getGrossMargin());
-        System.out.println(data.getGrossMargin(1));
-    }
-*//*
-        public static void main(String[] args) {
-            DataRetriever data = new DataRetriever();*//*
-        System.out.println(data.findOrderByReference("ORD00001"));
-*/
-
-        Dish dish_1 = data.findDishById(1);
-        Dish dish_2 = data.findDishById(2);
-        Dish dish_3 = data.findDishById(3);
-        List<DishOrder> dishOrders = List.of(
-                new DishOrder(null, dish_1, 2),
-                new DishOrder(3, dish_2, 3),
-                new DishOrder(null, dish_3, 1)
-        );
-        Order order = new Order(1, "ORD0005", null, dishOrders);
-        System.out.println(data.saveOrder(order));
-    }/*
-    public HashMap<String, List<Object>> stockStatistic(Periodicity periodicity, Instant intervalMin, Instant intervalMax) {
-        String sql = """
-                SELECT i.name,
-                       json_agg(
-                               jsonb_build_array(
-                                       substr(gs.periodicity::text, 0, 11),
-                                       coalesce((SELECT SUM(
-                                                                CASE
-                                                                    WHEN type = 'IN' THEN quantity
-                                                                    ELSE -quantity
-                                                                    END)
-                                                 FROM stock_movement stock
-                                                 WHERE stock.id_ingredient = i.id
-                                                   and stock.creation_datetime <=
-                                                       (gs.periodicity + INTERVAL ? - INTERVAL '1 microsecond')),
-                                                0)::numeric(10, 2),
-                                       (SELECT unit
-                                        from stock_movement
-                                        WHERE id_ingredient = i.id
-                                        ORDER BY creation_datetime DESC
-                                        LIMIT 1)::unit_type
-                               ) ORDER BY gs.periodicity
-                       ) as stock_evolution
-                FROM ingredient i
-                         CROSS JOIN LATERAL generate_series(?::date, ?::date, ?) AS gs(periodicity)
-                GROUP BY i.id, i.name
-                ORDER BY i.name;""";
-        try (Connection conn = dbConnection.getDBConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setObject(1, "1 "+periodicity.name());
-            ps.setTimestamp(2, Timestamp.from(intervalMin));
-            ps.setTimestamp(3, Timestamp.from(intervalMax));
-            ps.setObject(4, "1 "+periodicity.name());
-            System.out.println(ps);
-            ResultSet rs = ps.executeQuery();
-            HashMap<String, List<Object>> statistics = new HashMap<>();
-            while (rs.next()) {
-                statistics.put(rs.getString("name"),
-                List.of(rs.getObject("stock_evolution")));
-            }
-            return statistics;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }*//*
-        System.out.println(findIngredientById(1).getName()+", [\n["+intervalMin+", "+getStockValueAt(intervalMin, 1)+"]"
-        + ",\n["+intervalMin.plusSeconds(3600*24)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24), 1)+"]"
-        + ",\n["+intervalMin.plusSeconds(3600*24*2)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*2), 1)+"]"
-        + ",\n["+intervalMin.plusSeconds(3600*24*3)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*3), 1)+"]"
-        + ",\n["+intervalMin.plusSeconds(3600*24*4)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*4), 1)+"]"
-        + ",\n["+intervalMin.plusSeconds(3600*24*5)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*5), 1)+"]\n]");
-*//*
-
-    }
-*//*
-        System.out.println(data.stockStatistic(
-                Periodicity.DAY,
-                Instant.parse("2026-01-01T00:00:00.000Z"),
-                Instant.parse("2026-01-05T00:00:00.000Z")));*/
-
     public Order saveOrder(Order orderToSave) {
         String sql = """
                 insert into "order" (id, reference, creation_datetime)
@@ -541,21 +472,19 @@ public class DataRetriever {
             ps.setTimestamp(3, Timestamp.from(orderToSave.getCreationDatetime()));
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
-                savedOrder = new Order(
-                        idOrder,
-                        orderToSave.getReference(),
-                        orderToSave.getCreationDatetime(),
-                        null
-                );
+                savedOrder = new Order(rs.getInt("id"), orderToSave.getReference(), orderToSave.getCreationDatetime(), orderToSave.getDishOrders());
                 detachDishOrder(conn, idOrder);
+                List<DishOrder> dishOrders = new ArrayList<>();
                 if (!orderToSave.getDishOrders().isEmpty()) {
                     for (Dish dish : orderToSave.getDishOrders().stream().map(DishOrder::getDish).toList()) {
-                        saveDish(dish);
+                        Dish dish_ = saveDish(conn, dish);
+                        for (DishOrder dishOrder : orderToSave.getDishOrders()) {
+                            dishOrders.add(new DishOrder(dishOrder.getId(), dish_, dishOrder.getQuantity()));
+                        }
                     }
-                    attachDishOrder(conn, idOrder, orderToSave.getDishOrders());
+                    attachDishOrder(conn, idOrder, dishOrders);
+                    savedOrder.setDishOrder(dishOrders);
                 }
-                List<DishOrder> dishOrders = findDishOrderByOrderId(idOrder);
-                savedOrder.setDishOrder(dishOrders);
                 conn.commit();
                 return savedOrder;
             } catch (SQLException e) {
@@ -567,78 +496,26 @@ public class DataRetriever {
         }
     }
 
-    private void createDishes(Connection conn, List<Dish> dishes) {
-        String inClause = dishes.stream().map(_ -> "(?, ?, ?::dish_type, ?)")
-                .collect(Collectors.joining(", "));
-        String sql = """
-                insert into dish (id, name, dish_type, price)
-                values %s""".formatted(inClause);
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            int index = 1;
-            int idx = next_id(conn, "dish");
-            for (Dish dish : dishes) {
-                if (dish.getId() == null) {
-                    ps.setInt(index++, idx++);
-                } else {
-                    ps.setInt(index++, dish.getId());
-                }
-                ps.setString(index++, dish.getName());
-                ps.setObject(index++, dish.getDishType().name());
-                ps.setDouble(index++, dish.getPrice());
-            }
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private void attachDishOrder(Connection conn, Integer idOrder, List<DishOrder> dishOrders) {
-        String inClause = dishOrders.stream().map(_ -> "(?, ?, ?, ?)")
-                .collect(Collectors.joining(", "));
         String sql = """
                 insert into dish_order (id, id_order, id_dish, quantity)
-                values %s""".formatted(inClause);
+                values (?, ?, ?, ?) on conflict (id_order, id_dish)
+                    do update set quantity = excluded.quantity;""";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            int index = 1;
             int idx = next_id(conn, "dish_order");
             for (DishOrder dishOrder : dishOrders) {
-                ps.setInt(index++, idx++);
-                ps.setInt(index++, idOrder);
-                ps.setInt(index++, dishOrder.getDish().getId());
-                ps.setDouble(index++, dishOrder.getQuantity());
+                ps.setInt(1, idx++);
+                ps.setInt(2, idOrder);
+                ps.setInt(3, dishOrder.getDish().getId());
+                ps.setDouble(4, dishOrder.getQuantity());
+                ps.addBatch();
             }
-            ps.executeUpdate();
+            ps.executeBatch();
         } catch (SQLException e) {
             duplicationError(e);
             throw new RuntimeException(e);
         }
-    }
-
-    private List<DishOrder> findDishOrderByOrderId(Integer idOrder) {
-        String sql = """
-                select d_o.id, d_o.id_order, d_o.id_dish, d_o.quantity
-                from dish_order d_o where id_order = ?;""";
-        try (Connection conn = dbConnection.getDBConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, idOrder);
-            ResultSet rs = ps.executeQuery();
-            List<DishOrder> dishOrders = new ArrayList<>();
-            while (rs.next()) {
-                dishOrders.add(new DishOrder(
-                        rs.getInt("id"),
-                        findDishById(conn, rs.getInt("id_dish")),
-                        rs.getInt("quantity")
-                ));
-            }
-            return dishOrders;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Order findOrderById(Integer idOrder) {
-        throw new RuntimeException("Not Implemented");
     }
 
     private void detachDishOrder(Connection conn, Integer idOrder) {
