@@ -448,6 +448,92 @@ public class DataRetriever {
         }
     }
 
+    public static void main(String[] args) {
+        DataRetriever data = new DataRetriever();/*        System.out.println(data.findIngredientById(1).getStockValueAt(Instant.now()));
+        System.out.println(data.getStockValueAt(Instant.now(), 1));
+
+        System.out.println(data.findDishById(1).getDishCost());
+        System.out.println(data.getDishCost(1));
+
+        System.out.println(data.findDishById(1).getGrossMargin());
+        System.out.println(data.getGrossMargin(1));
+    }
+*//*
+        public static void main(String[] args) {
+            DataRetriever data = new DataRetriever();*//*
+        System.out.println(data.findOrderByReference("ORD00001"));
+*/
+
+        Dish dish_1 = data.findDishById(1);
+        Dish dish_2 = data.findDishById(2);
+        Dish dish_3 = data.findDishById(3);
+        List<DishOrder> dishOrders = List.of(
+                new DishOrder(null, dish_1, 2),
+                new DishOrder(3, dish_2, 3),
+                new DishOrder(null, dish_3, 1)
+        );
+        Order order = new Order(1, "ORD0005", null, dishOrders);
+        System.out.println(data.saveOrder(order));
+    }/*
+    public HashMap<String, List<Object>> getStatisticOfStock(Periodicity periodicity, Instant intervalMin, Instant intervalMax) {
+        String sql = """
+                SELECT i.name,
+                       json_agg(
+                               jsonb_build_array(
+                                       substr(gs.periodicity::text, 0, 11),
+                                       coalesce((SELECT SUM(
+                                                                CASE
+                                                                    WHEN type = 'IN' THEN quantity
+                                                                    ELSE -quantity
+                                                                    END)
+                                                 FROM stock_movement stock
+                                                 WHERE stock.id_ingredient = i.id
+                                                   and stock.creation_datetime <=
+                                                       (gs.periodicity + INTERVAL ? - INTERVAL '1 microsecond')),
+                                                0)::numeric(10, 2),
+                                       (SELECT unit
+                                        from stock_movement
+                                        WHERE id_ingredient = i.id
+                                        ORDER BY creation_datetime DESC
+                                        LIMIT 1)::unit_type
+                               ) ORDER BY gs.periodicity
+                       ) as stock_evolution
+                FROM ingredient i
+                         CROSS JOIN LATERAL generate_series(?::date, ?::date, ?) AS gs(periodicity)
+                GROUP BY i.id, i.name
+                ORDER BY i.name;""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, "1 "+periodicity.name());
+            ps.setTimestamp(2, Timestamp.from(intervalMin));
+            ps.setTimestamp(3, Timestamp.from(intervalMax));
+            ps.setObject(4, "1 "+periodicity.name());
+            System.out.println(ps);
+            ResultSet rs = ps.executeQuery();
+            HashMap<String, List<Object>> statistics = new HashMap<>();
+            while (rs.next()) {
+                statistics.put(rs.getString("name"),
+                List.of(rs.getObject("stock_evolution")));
+            }
+            return statistics;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }*//*
+        System.out.println(findIngredientById(1).getName()+", [\n["+intervalMin+", "+getStockValueAt(intervalMin, 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*2)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*2), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*3)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*3), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*4)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*4), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*5)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*5), 1)+"]\n]");
+*//*
+
+    }
+*//*
+        System.out.println(data.getStatisticOfStock(
+                Periodicity.DAY,
+                Instant.parse("2026-01-01T00:00:00.000Z"),
+                Instant.parse("2026-01-05T00:00:00.000Z")));*/
+
     public Order saveOrder(Order orderToSave) {
         String sql = """
                 insert into "order" (id, reference, creation_datetime)
@@ -683,7 +769,7 @@ public class DataRetriever {
         }
     }
 
-    public HashMap<String, List<StatsFormat>> stockStatistic(Periodicity periodicity, Instant intervalMin, Instant intervalMax) {
+    public HashMap<String, List<StatsFormat>> getStatisticOfStock(Periodicity periodicity, Instant intervalMin, Instant intervalMax) {
         String sql = """
                 SELECT i.name,
                        json_agg(
