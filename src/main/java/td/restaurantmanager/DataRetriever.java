@@ -2,21 +2,11 @@ package td.restaurantmanager;
 
 import org.json.JSONArray;
 
-import java.sql.Connection;
+import java.sql.*;
 import java.sql.Date;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -440,6 +430,93 @@ public class DataRetriever {
         }
     }
 
+
+    public static void main(String[] args) {
+        DataRetriever data = new DataRetriever();/*        System.out.println(data.findIngredientById(1).getStockValueAt(Instant.now()));
+        System.out.println(data.getStockValueAt(Instant.now(), 1));
+
+        System.out.println(data.findDishById(1).getDishCost());
+        System.out.println(data.getDishCost(1));
+
+        System.out.println(data.findDishById(1).getGrossMargin());
+        System.out.println(data.getGrossMargin(1));
+    }
+*//*
+        public static void main(String[] args) {
+            DataRetriever data = new DataRetriever();*//*
+        System.out.println(data.findOrderByReference("ORD00001"));
+*/
+
+        Dish dish_1 = data.findDishById(1);
+        Dish dish_2 = data.findDishById(2);
+        Dish dish_3 = data.findDishById(3);
+        List<DishOrder> dishOrders = List.of(
+                new DishOrder(null, dish_1, 2),
+                new DishOrder(3, dish_2, 3),
+                new DishOrder(null, dish_3, 1)
+        );
+        Order order = new Order(1, "ORD0005", null, dishOrders);
+        System.out.println(data.saveOrder(order));
+    }/*
+    public HashMap<String, List<Object>> stockStatistic(Periodicity periodicity, Instant intervalMin, Instant intervalMax) {
+        String sql = """
+                SELECT i.name,
+                       json_agg(
+                               jsonb_build_array(
+                                       substr(gs.periodicity::text, 0, 11),
+                                       coalesce((SELECT SUM(
+                                                                CASE
+                                                                    WHEN type = 'IN' THEN quantity
+                                                                    ELSE -quantity
+                                                                    END)
+                                                 FROM stock_movement stock
+                                                 WHERE stock.id_ingredient = i.id
+                                                   and stock.creation_datetime <=
+                                                       (gs.periodicity + INTERVAL ? - INTERVAL '1 microsecond')),
+                                                0)::numeric(10, 2),
+                                       (SELECT unit
+                                        from stock_movement
+                                        WHERE id_ingredient = i.id
+                                        ORDER BY creation_datetime DESC
+                                        LIMIT 1)::unit_type
+                               ) ORDER BY gs.periodicity
+                       ) as stock_evolution
+                FROM ingredient i
+                         CROSS JOIN LATERAL generate_series(?::date, ?::date, ?) AS gs(periodicity)
+                GROUP BY i.id, i.name
+                ORDER BY i.name;""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, "1 "+periodicity.name());
+            ps.setTimestamp(2, Timestamp.from(intervalMin));
+            ps.setTimestamp(3, Timestamp.from(intervalMax));
+            ps.setObject(4, "1 "+periodicity.name());
+            System.out.println(ps);
+            ResultSet rs = ps.executeQuery();
+            HashMap<String, List<Object>> statistics = new HashMap<>();
+            while (rs.next()) {
+                statistics.put(rs.getString("name"),
+                List.of(rs.getObject("stock_evolution")));
+            }
+            return statistics;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }*//*
+        System.out.println(findIngredientById(1).getName()+", [\n["+intervalMin+", "+getStockValueAt(intervalMin, 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*2)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*2), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*3)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*3), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*4)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*4), 1)+"]"
+        + ",\n["+intervalMin.plusSeconds(3600*24*5)+", "+getStockValueAt(intervalMin.plusSeconds(3600*24*5), 1)+"]\n]");
+*//*
+
+    }
+*//*
+        System.out.println(data.stockStatistic(
+                Periodicity.DAY,
+                Instant.parse("2026-01-01T00:00:00.000Z"),
+                Instant.parse("2026-01-05T00:00:00.000Z")));*/
+
     public Order saveOrder(Order orderToSave) {
         String sql = """
                 insert into "order" (id, reference, creation_datetime)
@@ -471,10 +548,13 @@ public class DataRetriever {
                         null
                 );
                 detachDishOrder(conn, idOrder);
-                List<DishOrder> dishOrders = findDishOrderByOrderId(idOrder);
                 if (!orderToSave.getDishOrders().isEmpty()) {
-//                    attachDishOrder(conn, idOrder, dishOrders);
+                    for (Dish dish : orderToSave.getDishOrders().stream().map(DishOrder::getDish).toList()) {
+                        saveDish(dish);
+                    }
+                    attachDishOrder(conn, idOrder, orderToSave.getDishOrders());
                 }
+                List<DishOrder> dishOrders = findDishOrderByOrderId(idOrder);
                 savedOrder.setDishOrder(dishOrders);
                 conn.commit();
                 return savedOrder;
@@ -487,9 +567,77 @@ public class DataRetriever {
         }
     }
 
+    private void createDishes(Connection conn, List<Dish> dishes) {
+        String inClause = dishes.stream().map(_ -> "(?, ?, ?::dish_type, ?)")
+                .collect(Collectors.joining(", "));
+        String sql = """
+                insert into dish (id, name, dish_type, price)
+                values %s""".formatted(inClause);
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            int index = 1;
+            int idx = next_id(conn, "dish");
+            for (Dish dish : dishes) {
+                if (dish.getId() == null) {
+                    ps.setInt(index++, idx++);
+                } else {
+                    ps.setInt(index++, dish.getId());
+                }
+                ps.setString(index++, dish.getName());
+                ps.setObject(index++, dish.getDishType().name());
+                ps.setDouble(index++, dish.getPrice());
+            }
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void attachDishOrder(Connection conn, Integer idOrder, List<DishOrder> dishOrders) {
+        String inClause = dishOrders.stream().map(_ -> "(?, ?, ?, ?)")
+                .collect(Collectors.joining(", "));
+        String sql = """
+                insert into dish_order (id, id_order, id_dish, quantity)
+                values %s""".formatted(inClause);
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            int index = 1;
+            int idx = next_id(conn, "dish_order");
+            for (DishOrder dishOrder : dishOrders) {
+                ps.setInt(index++, idx++);
+                ps.setInt(index++, idOrder);
+                ps.setInt(index++, dishOrder.getDish().getId());
+                ps.setDouble(index++, dishOrder.getQuantity());
+            }
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            duplicationError(e);
+            throw new RuntimeException(e);
+        }
+    }
+
     private List<DishOrder> findDishOrderByOrderId(Integer idOrder) {
         String sql = """
-                select * from dish_order""";
+                select d_o.id, d_o.id_order, d_o.id_dish, d_o.quantity
+                from dish_order d_o where id_order = ?;""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idOrder);
+            ResultSet rs = ps.executeQuery();
+            List<DishOrder> dishOrders = new ArrayList<>();
+            while (rs.next()) {
+                dishOrders.add(new DishOrder(
+                        rs.getInt("id"),
+                        findDishById(conn, rs.getInt("id_dish")),
+                        rs.getInt("quantity")
+                ));
+            }
+            return dishOrders;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Order findOrderById(Integer idOrder) {
         throw new RuntimeException("Not Implemented");
     }
 
@@ -660,27 +808,27 @@ public class DataRetriever {
 
     public HashMap<String, List<StatsFormat>> stockStatistic(Periodicity periodicity, Instant intervalMin, Instant intervalMax) {
         String sql = """
-        SELECT i.name,
-               json_agg(
-                   jsonb_build_array(
-                       to_char(gs.periodicity, 'YYYY-MM-DD'),
-                       COALESCE(
-                           (SELECT SUM(CASE WHEN stock.type = 'IN' THEN stock.quantity ELSE -stock.quantity END)
-                            FROM stock_movement stock
-                            WHERE stock.id_ingredient = i.id AND stock.creation_datetime <=
-                                  (gs.periodicity + ?::interval - INTERVAL '1 microsecond')),
-                           0)::numeric(12,3),
-                       COALESCE(
-                           (SELECT stock.unit::text FROM stock_movement stock
-                            WHERE stock.id_ingredient = i.id
-                            ORDER BY stock.creation_datetime DESC LIMIT 1),
-                           'KG')::unit_type
-                   ) ORDER BY gs.periodicity
-               ) AS stock_statistic
-        FROM ingredient i
-        CROSS JOIN LATERAL generate_series(?::date, ?::date, ?::interval) gs(periodicity)
-        GROUP BY i.id, i.name
-        ORDER BY i.name;""";
+                SELECT i.name,
+                       json_agg(
+                           jsonb_build_array(
+                               to_char(gs.periodicity, 'YYYY-MM-DD'),
+                               COALESCE(
+                                   (SELECT SUM(CASE WHEN stock.type = 'IN' THEN stock.quantity ELSE -stock.quantity END)
+                                    FROM stock_movement stock
+                                    WHERE stock.id_ingredient = i.id AND stock.creation_datetime <=
+                                          (gs.periodicity + ?::interval - INTERVAL '1 microsecond')),
+                                   0)::numeric(12,3),
+                               COALESCE(
+                                   (SELECT stock.unit::text FROM stock_movement stock
+                                    WHERE stock.id_ingredient = i.id
+                                    ORDER BY stock.creation_datetime DESC LIMIT 1),
+                                   'KG')::unit_type
+                           ) ORDER BY gs.periodicity
+                       ) AS stock_statistic
+                FROM ingredient i
+                CROSS JOIN LATERAL generate_series(?::date, ?::date, ?::interval) gs(periodicity)
+                GROUP BY i.id, i.name
+                ORDER BY i.name;""";
 
         try (Connection conn = dbConnection.getDBConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
