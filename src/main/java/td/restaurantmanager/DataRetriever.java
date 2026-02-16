@@ -822,7 +822,7 @@ public class DataRetriever {
             ResultSet rs = ps.executeQuery();
             List<Dish> dishes = new ArrayList<>();
             while (rs.next()) {
-                dishes.add(findDishById(rs.getInt("dish_id")));
+                dishes.add(findDishById(conn, rs.getInt("dish_id")));
             }
             return dishes;
         } catch (SQLException e) {
