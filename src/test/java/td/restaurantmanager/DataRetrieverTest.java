@@ -11,52 +11,51 @@ public class DataRetrieverTest {
     //given
     @BeforeEach
     public void setUp() {
-        this.dataRetriever = new DataRetriever();
+        dataRetriever = new DataRetriever();
+        dataRetriever.initialiseData(dataRetriever);
     }
 
     @AfterEach
     public void tearDown() {
-        if (this.dataRetriever != null) {
-            this.dataRetriever.resetData();
-        }
+        dataRetriever.initialiseData(dataRetriever);
     }
 
     @Test
     @DisplayName("a. Find dish by id=1")
     void findDishById_1() {
         //When
-        Dish find_dish_1 = dataRetriever.findDishById(1);
+        Dish dish_1 = dataRetriever.findDishById(1);
 
         //Then
-        Assertions.assertEquals(1, find_dish_1.getId(), "ID should be 1");
+        Assertions.assertEquals(1, dish_1.getId(), "ID should be 1");
         Assertions.assertEquals(
-                "Salade fraîche", find_dish_1.getName(),
+                "Salade fraîche", dish_1.getName(),
                 "'Salade fraîche' is the name of dish having id 1"
         );
 
         //When
-        List<Ingredient> ingredients_of_dish_1 = find_dish_1.getIngredients();
+        List<DishIngredient> dish_ingredient_of_dish_1 = dish_1.getDishIngredients();
 
         //Then
         Assertions.assertEquals(
-                2, ingredients_of_dish_1.size(),
+                2, dish_ingredient_of_dish_1.size(),
                 "Dish have 2 Ingredient")
         ;
 
         //When
-        Ingredient laitue = ingredients_of_dish_1.get(0);
-        Ingredient tomate = ingredients_of_dish_1.get(1);
+        DishIngredient laitue = dish_ingredient_of_dish_1.get(0);
+        DishIngredient tomate = dish_ingredient_of_dish_1.get(1);
 
         //Then
-        Assertions.assertEquals("Salade fraîche", laitue.getDishName());
-        Assertions.assertEquals("Salade fraîche", tomate.getDishName());
+        Assertions.assertEquals("Salade fraîche", laitue.getDish().getName());
+        Assertions.assertEquals("Salade fraîche", tomate.getDish().getName());
         Assertions.assertEquals(
-                laitue.getDishName(),
-                tomate.getDishName(),
+                laitue.getDish().getName(),
+                tomate.getDish().getName(),
                 "'Laitue' and 'tomate' have the same dishName(Salade fraîche) for dish ID equal 1"
         );
-        Assertions.assertEquals("Laitue", laitue.getName());
-        Assertions.assertEquals("Tomate", tomate.getName());
+        Assertions.assertEquals("Laitue", laitue.getDish().getName());
+        Assertions.assertEquals("Tomate", tomate.getDish().getName());
     }
 
     @Test
@@ -99,14 +98,14 @@ public class DataRetrieverTest {
 
     @Test
     @DisplayName("e. 'eur' --> Gâteau aux chocolat')")
-    void findDishByIngredietsName_eur() {
+    void findDishByIngredientsName_eur() {
         //when
         List<Dish> dish_list = dataRetriever.findDishByIngredientsName("eur");
 
         //then
         Assertions.assertEquals(1, dish_list.size(), "Should return 1");
-        Assertions.assertEquals("Gâteau aux chocolat", dish_list.get(0).getName());
-        Assertions.assertEquals("Gâteau aux chocolat", dish_list.get(0).getIngredients().getFirst().getDishName());
+        Assertions.assertEquals("Gâteau aux chocolat", dish_list.getFirst().getName());
+        Assertions.assertEquals("Gâteau aux chocolat", dish_list.getFirst().getDishIngredients().getFirst().getDish().getName());
     }
 
     @Test
@@ -125,7 +124,7 @@ public class DataRetrieverTest {
                 .map(Ingredient::getName)
                 .toList();
         //then
-        Assertions.assertEquals(List.of("Laitue", "Tomate"), result);
+        Assertions.assertEquals(List.of("Laitue", "Tomate") , result);
     }
 
     @Test
@@ -166,7 +165,7 @@ public class DataRetrieverTest {
     @Test
     @DisplayName("i. Create ingredients fromage and oignon")
     void createIngredientsFromageAndOignon() {
-        //given
+        //when
         List<Ingredient> fromage_and_oignon = List.of(
                 new Ingredient(
                         6,
@@ -181,27 +180,20 @@ public class DataRetrieverTest {
                         CategoryEnum.VEGETABLE
                 )
         );
-        Ingredient fromage = fromage_and_oignon.get(0);
-        Ingredient oignon = fromage_and_oignon.get(1);
-
-        //when
-        var ingredient_cree = dataRetriever.createIngredients(fromage_and_oignon);
+        var create_ingredients = dataRetriever.createIngredients(fromage_and_oignon);
 
         //then
-        Assertions.assertEquals(fromage_and_oignon, ingredient_cree, "Sould be have same value and return Fromage and Oignon");
+        Assertions.assertEquals(fromage_and_oignon, create_ingredients, "Sould be have same value and return Fromage and Oignon");
 
-        Assertions.assertEquals(2, ingredient_cree.size(), "Sould be 2");
-        Assertions.assertNull(fromage.getDish(), "Dish of Fromage is null");
-        Assertions.assertNull(oignon.getDish(), "Dish of Oignon is null");
-        Assertions.assertEquals(fromage.getDishName(), oignon.getDishName());
-        Assertions.assertEquals(fromage.getDishName(), ingredient_cree.get(0).getDishName());
-        Assertions.assertEquals(oignon.getDishName(), ingredient_cree.get(1).getDishName());
+        Assertions.assertEquals(2, create_ingredients.size(), "Sould be 2");
+        Assertions.assertNull(dataRetriever.findDishByIngredientsName("fromage"), "Dish of Fromage is null");
+        Assertions.assertNull(dataRetriever.findDishByIngredientsName("oignon"), "Dish of Oignon is null");
     }
 
     @Test
     @DisplayName("j. Create ingredients Carotte and laitue")
     void createIngredientsCarotteAndLaitue() {
-        //given
+        //when
         List<Ingredient> carotte_and_laitue = List.of(
                 new Ingredient(
                         8,
@@ -220,74 +212,99 @@ public class DataRetrieverTest {
         //then
         Assertions.assertThrows(
                 RuntimeException.class, () -> {
-                    //when
                     dataRetriever.createIngredients(carotte_and_laitue);
                 },
                 "Should throw an exception"
         );
+
+        //when
+        List<Ingredient> ingredients = dataRetriever.findIngredients(1, 10);
+
+        //then
+        Assertions.assertFalse(ingredients.contains(carotte_and_laitue.get(0)), "Should return false");
+        Assertions.assertFalse(ingredients.contains(carotte_and_laitue.get(1)), "Should return false");
     }
 
     @Test
     @DisplayName("k. Soupe légume with ingredient oignon")
     void soupeLegumeWithIngredientOignon() {
-        //given
+        //when
         Ingredient oignon = new Ingredient(
                 7, "Oignon",
                 500.00,
                 CategoryEnum.VEGETABLE
         );
+
+        List<DishIngredient> dishIngredients = List.of(
+                new DishIngredient(oignon, 0.2, UnitType.KG)
+        );
         Dish soupe_legume = new Dish(
                 8,
                 "Soupe de légumes",
                 DishTypeEnum.STARTER,
-                List.of(oignon)
+                2000.0,
+                dishIngredients
         );
 
-        //when
         dataRetriever.saveDish(soupe_legume);
 
         //then
-        Assertions.assertEquals(soupe_legume.getIngredients(), List.of(oignon), "Sould be true");
-        Assertions.assertEquals(soupe_legume.getName(), oignon.getDishName(), "Sould have same name");
-        Assertions.assertNotEquals(new ArrayList<>(), soupe_legume.getIngredients(), "Throw a erroer");
+        Assertions.assertEquals(soupe_legume.getDishIngredients(), dishIngredients, "Sould be true");
+        Assertions.assertEquals(soupe_legume.getName(), dishIngredients.getFirst().getDish().getName(), "Sould have same name");
+        Assertions.assertNotEquals(new ArrayList<>(), soupe_legume.getDishIngredients(), "Throw a error");
     }
 
     @Test
     @DisplayName("l. Salade fraîche ingredient updated with oignon and fromage")
     void saladeFraicheIngredientUpdatedWithOignonAndFromage() {
-        //given
+        //when
         Dish salade_fraiche = new Dish(
                 1,
                 "Salade fraiche",
                 DishTypeEnum.STARTER,
+                1500.0,
                 List.of(
-                        new Ingredient(7, "Oignon", 500.0, CategoryEnum.VEGETABLE),
-                        new Ingredient(1, "Laitue", 2000.0, CategoryEnum.VEGETABLE),
-                        new Ingredient(2, "Tomate", 200.00, CategoryEnum.VEGETABLE),
-                        new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
+                        new DishIngredient(
+                                new Ingredient(7, "Oignon", 500.0, CategoryEnum.VEGETABLE),
+                                1300.0, UnitType.KG),
+                        new DishIngredient(
+                                new Ingredient(1, "Laitue", 2000.0, CategoryEnum.VEGETABLE),
+                                3000.0, UnitType.KG),
+                        new DishIngredient(
+                                new Ingredient(2, "Tomate", 200.00, CategoryEnum.VEGETABLE),
+                                1600.0, UnitType.KG),
+                        new DishIngredient(
+                                new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY),
+                                5000.0, UnitType.KG)
                 )
         );
-
-        //when
         dataRetriever.saveDish(salade_fraiche);
 
         //then
         Assertions.assertEquals(
-                salade_fraiche.getIngredients(),
+                salade_fraiche.getDishIngredients().stream().map(DishIngredient::getIngredient).toList(),
                 List.of(
                         new Ingredient(7, "Oignon", 500.0, CategoryEnum.VEGETABLE),
                         new Ingredient(1, "Laitue", 2000.0, CategoryEnum.VEGETABLE),
                         new Ingredient(2, "Tomate", 200.00, CategoryEnum.VEGETABLE),
                         new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
                 ));
-        Assertions.assertNotEquals(2, salade_fraiche.getIngredients().size(), "Throw error");
-        Assertions.assertEquals(4, salade_fraiche.getIngredients().size(), "Return 4 ingredients");
+        Assertions.assertNotEquals(2, salade_fraiche.getDishIngredients().size(), "Throw error");
+        Assertions.assertEquals(4, salade_fraiche.getDishIngredients().size(), "Return 4 ingredients");
         Assertions.assertEquals(
                 (500
-                 + 2000
-                 + 200
-                 + 3000),
+                        + 2000
+                        + 200
+                        + 3000),
                 salade_fraiche.getDishCost(),
+                "Return 5700"
+        );
+        Assertions.assertEquals(
+                (500
+                        + 2000
+                        + 200
+                        + 3000),
+                dataRetriever.getDishCost(1),
                 "Return 5700"
         );
     }
@@ -295,30 +312,41 @@ public class DataRetrieverTest {
     @Test
     @DisplayName("m. Salade fraîche ingredient only fromage")
     void saladeFraicheIngredientOnlyFromage() {
-        //given
+        //when
         Dish salade_fraiche = new Dish(
                 1,
                 "Salade fraiche",
                 DishTypeEnum.STARTER,
+                1500.0,
                 List.of(
-                        new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY)
+                        new DishIngredient(
+                                new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY),
+                                5000.0, UnitType.KG)
                 )
         );
-
-        //when
         dataRetriever.saveDish(salade_fraiche);
 
         //then
-        Assertions.assertEquals(1, salade_fraiche.getIngredients().size(), "Return 1");
+        Assertions.assertEquals(1, salade_fraiche.getDishIngredients().size(), "Return 1");
         Assertions.assertEquals(
                 "Fromage",
-                salade_fraiche.getIngredients().get(0).getName(),
+                salade_fraiche.getDishIngredients().getFirst().getIngredient().getName(),
                 "Return Fromage"
         );
         Assertions.assertNotEquals(
                 5700,
-                salade_fraiche.getIngredients().get(0).getPrice(),
+                salade_fraiche.getDishCost(),
                 "Have different cost"
+        );
+        Assertions.assertNotEquals(
+                5700,
+                dataRetriever.getDishCost(1),
+                "Have different cost"
+        );
+        Assertions.assertNotEquals(
+                5700,
+                salade_fraiche.getDishIngredients().getFirst().getIngredient().getPrice(),
+                "Have different price"
         );
     }
 }

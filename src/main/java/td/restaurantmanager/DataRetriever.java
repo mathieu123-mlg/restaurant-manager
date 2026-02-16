@@ -824,6 +824,9 @@ public class DataRetriever {
             while (rs.next()) {
                 dishes.add(findDishById(conn, rs.getInt("dish_id")));
             }
+            if (dishes.isEmpty()) {
+                return null;
+            }
             return dishes;
         } catch (SQLException e) {
             throw new RuntimeException(e);
