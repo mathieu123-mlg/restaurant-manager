@@ -832,4 +832,29 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     }
+
+    public void resetData() {
+        String sql = """
+                delete from dish cascade;
+                delete from ingredient cascade;
+                delete from "order" cascade;
+                """;
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void initialiseData(DataRetriever dataRetriever) {
+        dataRetriever.resetData();
+        String sql = "\i data.sql";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
