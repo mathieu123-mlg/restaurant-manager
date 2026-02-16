@@ -808,4 +808,25 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     }
+
+    public List<Dish> findDishByIngredientsName(String eur) {
+        String sql = """
+                select d.id as dish_id
+                from dish d
+                join dish_ingredient d_i on d_i.id_dish = d.id
+                join ingredient i on d_i.id_ingredient = i.id
+                where i.name ilike ?""";
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, "%" + eur + "%");
+            ResultSet rs = ps.executeQuery();
+            List<Dish> dishes = new ArrayList<>();
+            while (rs.next()) {
+                dishes.add(findDishById(rs.getInt("dish_id")));
+            }
+            return dishes;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
