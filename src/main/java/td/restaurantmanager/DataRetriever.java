@@ -1,7 +1,11 @@
 package td.restaurantmanager;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import org.json.JSONArray;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.sql.*;
 import java.sql.Date;
 import java.time.Instant;
@@ -16,8 +20,8 @@ public class DataRetriever {
 
     public Dish findDishById(Integer idDish) {
         String sql = """
-                select d.id as dish_id, d.name as dish_name, d.dish_type as dish_type, d.price as dish_price,
-                d_i.id as di_id, d_i.id_ingredient, d_i.quantity_required, d_i.unit,
+                select d.id as dish_id, d.name as dish_name, d.dish_type, d.price as dish_price,
+                d_i.id as di_id, d_i.quantity_required, d_i.unit,
                 i.id as ingredient_id, i.name as ingredient_name, i.price as ingredient_price, i.category
                 from dish d
                 left join dish_ingredient d_i on d_i.id_dish = d.id
@@ -85,6 +89,8 @@ public class DataRetriever {
                 .map(d_i -> d_i.getIngredient().getId())
                 .collect(Collectors.toSet());
         var stockMovementList = fetchStockMovementUsingExistingIds(ingredientIds);
+
+
         dish.setDishIngredients(dishIngredients, stockMovementList);
         return dish;
     }
@@ -849,11 +855,53 @@ public class DataRetriever {
 
     public void initialiseData(DataRetriever dataRetriever) {
         dataRetriever.resetData();
-        String sql = "\i data.sql";
-        try (Connection conn = dbConnection.getDBConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.executeUpdate();
-        } catch (SQLException e) {
+        Dotenv dotenv = Dotenv.load();
+        String sqlFilePath = "E:/HEI/L2/TD/exo jdbc/restaurant-manager/src/main/resources/sql/data.sql";
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                    "psql",
+                    "-U", dotenv.get("USER"),
+                    "-d", "mini_dish_db",
+                    "-h", "localhost",
+                    "-p", "5432",
+                    "-f", sqlFilePath
+            );
+
+            pb.environment().put("PGPASSWORD", dotenv.get("PASSWORD"));
+            Process process = pb.start();
+
+            Thread outReader = new Thread(() -> {
+                try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            Thread errReader = new Thread(() -> {
+                try (var reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.err.println("[psql ERR] " + line);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            outReader.start();
+            errReader.start();
+            int exitCode = process.waitFor();
+            outReader.join(1500);
+            errReader.join(1500);
+
+            if (exitCode != 0) {
+                throw new RuntimeException("Échec psql → code " + exitCode);
+            }
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
