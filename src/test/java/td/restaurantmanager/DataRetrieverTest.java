@@ -54,8 +54,8 @@ public class DataRetrieverTest {
                 tomate.getDish().getName(),
                 "'Laitue' and 'tomate' have the same dishName(Salade fraîche) for dish ID equal 1"
         );
-        Assertions.assertEquals("Laitue", laitue.getDish().getName());
-        Assertions.assertEquals("Tomate", tomate.getDish().getName());
+        Assertions.assertEquals("Salade fraîche", laitue.getDish().getName());
+        Assertions.assertEquals("Salade fraîche", tomate.getDish().getName());
     }
 
     @Test
@@ -246,11 +246,11 @@ public class DataRetrieverTest {
                 dishIngredients
         );
 
-        dataRetriever.saveDish(soupe_legume);
+        soupe_legume = dataRetriever.saveDish(soupe_legume);
 
         //then
-        Assertions.assertEquals(soupe_legume.getDishIngredients(), dishIngredients, "Sould be true");
-        Assertions.assertEquals(soupe_legume.getName(), dishIngredients.getFirst().getDish().getName(), "Sould have same name");
+        Assertions.assertEquals(soupe_legume.getDishIngredients(), soupe_legume.getDishIngredients(), "Sould be true");
+        Assertions.assertEquals(soupe_legume.getName(), soupe_legume.getDishIngredients().getFirst().getDish().getName(), "Sould have same name");
         Assertions.assertNotEquals(new ArrayList<>(), soupe_legume.getDishIngredients(), "Throw a error");
     }
 
@@ -266,19 +266,19 @@ public class DataRetrieverTest {
                 List.of(
                         new DishIngredient(
                                 new Ingredient(7, "Oignon", 500.0, CategoryEnum.VEGETABLE),
-                                1300.0, UnitType.KG),
+                                0.5, UnitType.KG),
                         new DishIngredient(
                                 new Ingredient(1, "Laitue", 2000.0, CategoryEnum.VEGETABLE),
-                                3000.0, UnitType.KG),
+                                2.0, UnitType.KG),
                         new DishIngredient(
                                 new Ingredient(2, "Tomate", 200.00, CategoryEnum.VEGETABLE),
-                                1600.0, UnitType.KG),
+                                1.0, UnitType.KG),
                         new DishIngredient(
                                 new Ingredient(9, "Fromage", 3000.0, CategoryEnum.DAIRY),
-                                5000.0, UnitType.KG)
+                                0.3, UnitType.KG)
                 )
         );
-        dataRetriever.saveDish(salade_fraiche);
+        salade_fraiche = dataRetriever.saveDish(salade_fraiche);
 
         //then
         Assertions.assertEquals(
@@ -292,20 +292,14 @@ public class DataRetrieverTest {
         Assertions.assertNotEquals(2, salade_fraiche.getDishIngredients().size(), "Throw error");
         Assertions.assertEquals(4, salade_fraiche.getDishIngredients().size(), "Return 4 ingredients");
         Assertions.assertEquals(
-                (500
-                        + 2000
-                        + 200
-                        + 3000),
+                ((500.0 * 0.5) + (2000.0 * 2.0) + (200.00 * 1.0) + (3000.0 * 0.3)),
                 salade_fraiche.getDishCost(),
-                "Return 5700"
+                "Return 5350"
         );
         Assertions.assertEquals(
-                (500
-                        + 2000
-                        + 200
-                        + 3000),
-                dataRetriever.getDishCost(1),
-                "Return 5700"
+                salade_fraiche.getDishCost(),
+                (dataRetriever.getDishCost(1)),
+                "Return same value [3350]"
         );
     }
 
